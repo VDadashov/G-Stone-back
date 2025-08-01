@@ -1,0 +1,175 @@
+import { Controller, Get, Post, Body, Param, Put, Delete, UploadedFiles, UseInterceptors, BadRequestException, Query, Headers } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBody, ApiConsumes } from '@nestjs/swagger';
+import { ProductService } from './product.service';
+import { CreateProductDto } from './dto/create-product.dto';
+import { UpdateProductDto } from './dto/update-product.dto';
+import { FilesInterceptor, AnyFilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
+
+function fileNameEdit(req, file, cb) {
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+  cb(null, uniqueSuffix + extname(file.originalname));
+}
+
+@ApiTags('Product')
+@Controller('products')
+export class ProductController {
+  constructor(private readonly productService: ProductService) {}
+
+  @Post()
+  @ApiOperation({ summary: 'Create product' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateProductDto })
+  @ApiResponse({ status: 201, description: 'Product created' })
+  @UseInterceptors(AnyFilesInterceptor({
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+          cb(null, './public/uploads/images');
+        } else if (file.mimetype === 'application/pdf') {
+          cb(null, './public/uploads/pdfs');
+        } else {
+          cb(new Error('Unsupported file type'), '');
+        }
+      },
+      filename: fileNameEdit,
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+        cb(null, true);
+      } else {
+        cb(null, false);
+      }
+    },
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  }))
+  async create(@UploadedFiles() files: Array<Express.Multer.File>, @Body() dto: CreateProductDto) {
+    if (typeof dto.title === 'string') {
+      dto.title = JSON.parse(dto.title);
+    }
+    if (typeof dto.description === 'string') {
+      dto.description = JSON.parse(dto.description);
+    }
+    if (dto.categoryId) {
+      dto.categoryId = Number(dto.categoryId);
+    }
+    if (dto.companyId) {
+      dto.companyId = Number(dto.companyId);
+    }
+    
+    // Məcburi field-ləri yoxla
+    if (!dto.categoryId) {
+      throw new BadRequestException('categoryId məcburidir');
+    }
+    if (!dto.companyId) {
+      throw new BadRequestException('companyId məcburidir');
+    }
+    if (files && files.length) {
+      dto.imageList = [];
+      for (const file of files) {
+        if (file.mimetype.startsWith('image/')) {
+          if (!dto.mainImage) {
+            dto.mainImage = file.path.replace('public/', '');
+          }
+          dto.imageList.push(file.path.replace('public/', ''));
+        } else if (file.mimetype === 'application/pdf') {
+          dto.detailPdf = file.path.replace('public/', '');
+        }
+      }
+    }
+    // imageList her zaman dizi olsun
+    if (!dto.imageList || typeof dto.imageList === 'string') {
+      dto.imageList = [];
+    }
+    return this.productService.create(dto);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all products' })
+  @ApiResponse({ status: 200, description: 'List of products' })
+  findAll(@Headers('accept-language') acceptLanguage?: string) {
+    return this.productService.findAll(acceptLanguage);
+  }
+
+  @Get('search')
+  @ApiOperation({ summary: 'Search products by title' })
+  @ApiResponse({ status: 200, description: 'Filtered products' })
+  search(@Query('title') title: string, @Headers('accept-language') acceptLanguage?: string) {
+    return this.productService.searchByTitle(title, acceptLanguage);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get product by id' })
+  @ApiResponse({ status: 200, description: 'Product detail' })
+  findOne(@Param('id') id: number, @Headers('accept-language') acceptLanguage?: string) {
+    return this.productService.findOne(id, acceptLanguage);
+  }
+
+  @Put(':id')
+  @ApiOperation({ summary: 'Update product' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateProductDto })
+  @ApiResponse({ status: 200, description: 'Product updated' })
+  @UseInterceptors(AnyFilesInterceptor({
+    storage: diskStorage({
+      destination: (req, file, cb) => {
+        if (file.mimetype.startsWith('image/')) {
+          cb(null, './public/uploads/images');
+        } else if (file.mimetype === 'application/pdf') {
+          cb(null, './public/uploads/pdfs');
+        } else {
+          cb(new Error('Unsupported file type'), '');
+        }
+      },
+      filename: fileNameEdit,
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/') || file.mimetype === 'application/pdf') {
+        cb(null, true);
+      } else {
+        cb(null, false);
+      }
+    },
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  }))
+  async update(@Param('id') id: number, @UploadedFiles() files: Array<Express.Multer.File>, @Body() dto: UpdateProductDto) {
+    if (typeof dto.title === 'string') {
+      dto.title = JSON.parse(dto.title);
+    }
+    if (typeof dto.description === 'string') {
+      dto.description = JSON.parse(dto.description);
+    }
+    if (dto.categoryId) {
+      dto.categoryId = Number(dto.categoryId);
+    }
+    if (dto.companyId) {
+      dto.companyId = Number(dto.companyId);
+    }
+    if (files && files.length) {
+      dto.imageList = [];
+      for (const file of files) {
+        if (file.mimetype.startsWith('image/')) {
+          if (!dto.mainImage) {
+            dto.mainImage = file.path.replace('public/', '');
+          }
+          dto.imageList.push(file.path.replace('public/', ''));
+        } else if (file.mimetype === 'application/pdf') {
+          dto.detailPdf = file.path.replace('public/', '');
+        }
+      }
+    }
+    // imageList her zaman dizi olsun
+    if (!dto.imageList || typeof dto.imageList === 'string') {
+      dto.imageList = [];
+    }
+    return this.productService.update(id, dto);
+  }
+
+  @Delete(':id')
+  @ApiOperation({ summary: 'Delete product' })
+  @ApiResponse({ status: 200, description: 'Product deleted' })
+  remove(@Param('id') id: number) {
+    return this.productService.remove(id);
+  }
+} 
