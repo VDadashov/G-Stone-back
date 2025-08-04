@@ -26,7 +26,8 @@ export class CompanyService {
     }
     if (dto.categoryIds && dto.categoryIds.length > 0) {
       const categories = await this.categoryRepo.findByIds(dto.categoryIds);
-      if (categories.length !== dto.categoryIds.length) throw new NotFoundException('Bəzi category id-lər tapılmadı');
+      if (categories.length !== dto.categoryIds.length)
+        throw new NotFoundException('Bəzi category id-lər tapılmadı');
       company.categories = categories;
     }
     return this.companyRepo.save(company);
@@ -34,27 +35,39 @@ export class CompanyService {
 
   async findAll(lang?: string) {
     lang = lang || 'az';
-    const companies = await this.companyRepo.find({ relations: ['categories'] });
-    return companies.map((c) => ({
-      ...c,
-      categories: c.categories?.map(category => ({
-        id: category.id,
-        title: this.i18n.translateField(category.title, lang)
-      })) || [],
-      title: this.i18n.translateField(c.title, lang),
-      description: this.i18n.translateField(c.description, lang),
-    }));
+    const companies = await this.companyRepo.find({
+      relations: ['categories'],
+    });
+
+    return companies.map((c) => {
+      return {
+        ...c,
+        categories:
+          c.categories?.map((category) => ({
+            id: category.id,
+            title: this.i18n.translateField(category.title, lang),
+          })) || [],
+        title: this.i18n.translateField(c.title, lang),
+        description: this.i18n.translateField(c.description, lang),
+        altText: this.i18n.translateField(c.altText, lang),
+      };
+    });
   }
 
   async findOne(id: number, lang?: string) {
     lang = lang || 'az';
-    const company = await this.companyRepo.findOne({ where: { id }, relations: ['categories'] });
+    const company = await this.companyRepo.findOne({
+      where: { id },
+      relations: ['categories'],
+    });
     if (!company) throw new NotFoundException('Company not found');
+
     return {
       ...company,
-      categories: company.categories?.map(category => category.id) || [],
+      categories: company.categories?.map((category) => category.id) || [],
       title: this.i18n.translateField(company.title, lang),
       description: this.i18n.translateField(company.description, lang),
+      altText: this.i18n.translateField(company.altText, lang),
     };
   }
 
@@ -63,7 +76,6 @@ export class CompanyService {
     if (!company) throw new NotFoundException('Company not found');
     const oldTitleAz = company.title?.az;
     Object.assign(company, dto);
-    // Əgər title dəyişibsə slug yenilənsin
     if (dto.title && dto.title.az && dto.title.az !== oldTitleAz) {
       company.slug = slugify(dto.title.az);
     }
@@ -72,7 +84,8 @@ export class CompanyService {
     }
     if (dto.categoryIds && dto.categoryIds.length > 0) {
       const categories = await this.categoryRepo.findByIds(dto.categoryIds);
-      if (categories.length !== dto.categoryIds.length) throw new NotFoundException('Bəzi category id-lər tapılmadı');
+      if (categories.length !== dto.categoryIds.length)
+        throw new NotFoundException('Bəzi category id-lər tapılmadı');
       company.categories = categories;
     }
     return this.companyRepo.save(company);
@@ -94,29 +107,38 @@ export class CompanyService {
   }
 
   async findAllForAdmin() {
-    const companies = await this.companyRepo.find({ relations: ['categories'] });
+    const companies = await this.companyRepo.find({
+      relations: ['categories'],
+    });
     return companies.map((c) => ({
       ...c,
-      categories: c.categories?.map(category => ({
-        id: category.id,
-        title: category.title // bütün dillər
-      })) || [],
+      categories:
+        c.categories?.map((category) => ({
+          id: category.id,
+          title: category.title, // bütün dillər
+        })) || [],
       title: c.title, // bütün dillər
       description: c.description, // bütün dillər
+      altText: c.altText, // bütün dillər
     }));
   }
 
   async findOneForAdmin(id: number) {
-    const company = await this.companyRepo.findOne({ where: { id }, relations: ['categories'] });
+    const company = await this.companyRepo.findOne({
+      where: { id },
+      relations: ['categories'],
+    });
     if (!company) throw new NotFoundException('Company not found');
     return {
       ...company,
-      categories: company.categories?.map(category => ({
-        id: category.id,
-        title: category.title // bütün dillər
-      })) || [],
+      categories:
+        company.categories?.map((category) => ({
+          id: category.id,
+          title: category.title, // bütün dillər
+        })) || [],
       title: company.title, // bütün dillər
       description: company.description, // bütün dillər
+      altText: company.altText, // bütün dillər
     };
   }
-} 
+}

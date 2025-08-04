@@ -11,6 +11,9 @@ export class Company extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   description: { az: string; en?: string; ru?: string };
 
+  @Column({ type: 'jsonb', nullable: true })
+  altText: { az: string; en?: string; ru?: string };
+
   @Column({ nullable: true })
   logo: string;
 
@@ -22,4 +25,4 @@ export class Company extends BaseEntity {
 
   @OneToMany(() => Product, (product) => product.company)
   products: Product[];
-} 
+}

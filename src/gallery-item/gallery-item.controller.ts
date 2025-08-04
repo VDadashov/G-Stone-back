@@ -1,138 +1,158 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  Patch,
-  Param,
-  Delete,
-  UseInterceptors,
-  UploadedFiles,
-  Query,
-} from '@nestjs/common';
-import { FilesInterceptor } from '@nestjs/platform-express';
-import { ApiTags, ApiConsumes, ApiBody } from '@nestjs/swagger';
+import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Headers, UploadedFiles, UseInterceptors, BadRequestException, Query } from '@nestjs/common';
+import { ApiTags, ApiResponse, ApiOperation, ApiBearerAuth, ApiBody, ApiConsumes, ApiQuery } from '@nestjs/swagger';
 import { GalleryItemService } from './gallery-item.service';
 import { CreateGalleryItemDto } from './dto/create-gallery-item.dto';
 import { UpdateGalleryItemDto } from './dto/update-gallery-item.dto';
-import { ImageWithAltText } from './dto/create-gallery-item.dto';
+import { JwtAuthGuard } from '../_common/guards/jwt-auth.guard';
+import { Roles } from '../_common/decorators/roles.decorator';
+import { RolesGuard } from '../_common/guards/roles.guard';
+import { AnyFilesInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { extname } from 'path';
 
-@ApiTags('gallery-items')
-@Controller('gallery-items')
+function fileNameEdit(req, file, cb) {
+  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
+  cb(null, uniqueSuffix + extname(file.originalname));
+}
+
+@ApiTags('Gallery Item')
+@Controller('gallery-item')
 export class GalleryItemController {
   constructor(private readonly galleryItemService: GalleryItemService) {}
 
   @Post()
-  @UseInterceptors(FilesInterceptor('files'))
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Create gallery item' })
   @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'Gallery item creation with file upload',
-    type: CreateGalleryItemDto,
-  })
-  async create(
-    @Body() createGalleryItemDto: CreateGalleryItemDto,
-    @UploadedFiles() files: Array<Express.Multer.File>,
-  ) {
-    // Handle file uploads by converting them to ImageWithAltText format
-    if (files && files.length > 0) {
-      const imageList: ImageWithAltText[] = [];
-
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const imagePath = file.path.replace('public/', '');
-
-        // Create ImageWithAltText object
-        const imageWithAlt: ImageWithAltText = {
-          url: imagePath,
-          altText: {
-            az: `Şəkil ${i + 1}`, // Default alt text in Azerbaijani
-            en: `Image ${i + 1}`, // Default alt text in English
-            ru: `Изображение ${i + 1}`, // Default alt text in Russian
-          },
-        };
-
-        // Set first image as main image if not already set
-        if (i === 0 && !createGalleryItemDto.mainImage) {
-          createGalleryItemDto.mainImage = imageWithAlt;
-        }
-
-        imageList.push(imageWithAlt);
+  @ApiBody({ type: CreateGalleryItemDto })
+  @ApiResponse({ status: 201, description: 'Gallery item created' })
+  @UseInterceptors(AnyFilesInterceptor({
+    storage: diskStorage({
+      destination: './public/uploads/images',
+      filename: fileNameEdit,
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(null, false);
       }
-
-      // Update DTO with processed images
-      createGalleryItemDto.imageList = imageList;
+    },
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  }))
+  create(@Body() dto: CreateGalleryItemDto, @UploadedFiles() files: Array<Express.Multer.File>) {
+    // DTO transformations will handle parsing, no manual parsing needed
+    
+    // Basic validation
+    if (!dto.galleryCategoryId) {
+      throw new BadRequestException('galleryCategoryId məcburidir');
     }
 
-    return this.galleryItemService.create(createGalleryItemDto, files);
+    // Handle file uploads
+    if (files && files.length) {
+      dto.imageList = [];
+      for (const file of files) {
+        if (file.mimetype.startsWith('image/')) {
+          if (!dto.mainImage) {
+            dto.mainImage = file.path.replace('public/', '');
+          }
+          dto.imageList.push(file.path.replace('public/', ''));
+        }
+      }
+    }
+
+    // Ensure imageList is always an array
+    if (!dto.imageList) {
+      dto.imageList = [];
+    }
+
+    return this.galleryItemService.create(dto, files);
   }
 
   @Get()
-  findAll(@Query('lang') lang?: string) {
-    return this.galleryItemService.findAll(lang);
-  }
-
-  @Get('admin')
-  findAllForAdmin() {
-    return this.galleryItemService.findAllForAdmin();
+  @ApiOperation({ summary: 'Get all gallery items' })
+  @ApiQuery({ name: 'allLanguages', required: false, type: Boolean, description: 'Admin üçün bütün dillər' })
+  @ApiResponse({ status: 200, description: 'List of gallery items' })
+  findAll(
+    @Query('allLanguages') allLanguages?: boolean,
+    @Headers('accept-language') acceptLanguage?: string
+  ) {
+    if (allLanguages) {
+      return this.galleryItemService.findAllForAdmin();
+    }
+    return this.galleryItemService.findAll(acceptLanguage);
   }
 
   @Get(':id')
-  findOne(@Param('id') id: string, @Query('lang') lang?: string) {
-    return this.galleryItemService.findOne(+id, lang);
-  }
-
-  @Get('admin/:id')
-  findOneForAdmin(@Param('id') id: string) {
-    return this.galleryItemService.findOneForAdmin(+id);
-  }
-
-  @Patch(':id')
-  @UseInterceptors(FilesInterceptor('files'))
-  @ApiConsumes('multipart/form-data')
-  @ApiBody({
-    description: 'Gallery item update with file upload',
-    type: UpdateGalleryItemDto,
-  })
-  async update(
-    @Param('id') id: string,
-    @Body() updateGalleryItemDto: UpdateGalleryItemDto,
-    @UploadedFiles() files: Array<Express.Multer.File>,
+  @ApiOperation({ summary: 'Get gallery item by id' })
+  @ApiQuery({ name: 'allLanguages', required: false, type: Boolean, description: 'Admin üçün bütün dillər' })
+  @ApiResponse({ status: 200, description: 'Gallery item detail' })
+  findOne(
+    @Param('id') id: number,
+    @Query('allLanguages') allLanguages?: boolean,
+    @Headers('accept-language') acceptLanguage?: string
   ) {
-    // Handle file uploads by converting them to ImageWithAltText format
-    if (files && files.length > 0) {
-      const imageList: ImageWithAltText[] = [];
+    if (allLanguages) {
+      return this.galleryItemService.findOneForAdmin(id);
+    }
+    return this.galleryItemService.findOne(id, acceptLanguage);
+  }
 
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const imagePath = file.path.replace('public/', '');
-
-        // Create ImageWithAltText object
-        const imageWithAlt: ImageWithAltText = {
-          url: imagePath,
-          altText: {
-            az: `Yenilənmiş şəkil ${i + 1}`, // Default alt text in Azerbaijani
-            en: `Updated image ${i + 1}`, // Default alt text in English
-            ru: `Обновленное изображение ${i + 1}`, // Default alt text in Russian
-          },
-        };
-
-        // Set first image as main image if not already set
-        if (i === 0 && !updateGalleryItemDto.mainImage) {
-          updateGalleryItemDto.mainImage = imageWithAlt;
-        }
-
-        imageList.push(imageWithAlt);
+  @Put(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Update gallery item' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateGalleryItemDto })
+  @ApiResponse({ status: 200, description: 'Gallery item updated' })
+  @UseInterceptors(AnyFilesInterceptor({
+    storage: diskStorage({
+      destination: './public/uploads/images',
+      filename: fileNameEdit,
+    }),
+    fileFilter: (req, file, cb) => {
+      if (file.mimetype.startsWith('image/')) {
+        cb(null, true);
+      } else {
+        cb(null, false);
       }
+    },
+    limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
+  }))
+  update(@Param('id') id: number, @Body() dto: UpdateGalleryItemDto, @UploadedFiles() files: Array<Express.Multer.File>) {
+    // DTO transformations will handle parsing, no manual parsing needed
 
-      // Update DTO with processed images
-      updateGalleryItemDto.imageList = imageList;
+    // Handle file uploads
+    if (files && files.length) {
+      dto.imageList = [];
+      for (const file of files) {
+        if (file.mimetype.startsWith('image/')) {
+          if (!dto.mainImage) {
+            dto.mainImage = file.path.replace('public/', '');
+          }
+          dto.imageList.push(file.path.replace('public/', ''));
+        }
+      }
     }
 
-    return this.galleryItemService.update(+id, updateGalleryItemDto, files);
+    // Ensure imageList is always an array
+    if (!dto.imageList) {
+      dto.imageList = [];
+    }
+
+    return this.galleryItemService.update(id, dto, files);
   }
 
   @Delete(':id')
-  remove(@Param('id') id: string) {
-    return this.galleryItemService.remove(+id);
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Delete gallery item' })
+  @ApiResponse({ status: 200, description: 'Gallery item deleted' })
+  remove(@Param('id') id: number) {
+    return this.galleryItemService.remove(id);
   }
 }

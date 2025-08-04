@@ -1,5 +1,5 @@
 import { Controller, Get, Post, Body, Param, Put, Delete, UseGuards, Headers, Query } from '@nestjs/common';
-import { ApiTags, ApiResponse, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery, ApiHeader } from '@nestjs/swagger';
+import { ApiTags, ApiResponse, ApiOperation, ApiBearerAuth, ApiBody, ApiQuery } from '@nestjs/swagger';
 import { GalleryCategoryService } from './gallery-category.service';
 import { CreateGalleryCategoryDto } from './dto/create-gallery-category.dto';
 import { UpdateGalleryCategoryDto } from './dto/update-gallery-category.dto';
@@ -10,9 +10,7 @@ import { RolesGuard } from '../_common/guards/roles.guard';
 @ApiTags('Gallery Category')
 @Controller('gallery-category')
 export class GalleryCategoryController {
-  constructor(
-    private readonly galleryCategoryService: GalleryCategoryService,
-  ) {}
+  constructor(private readonly galleryCategoryService: GalleryCategoryService) {}
 
   @Post()
   @ApiBearerAuth()
@@ -28,21 +26,11 @@ export class GalleryCategoryController {
 
   @Get()
   @ApiOperation({ summary: 'Get all gallery categories' })
-  @ApiQuery({
-    name: 'allLanguages',
-    required: false,
-    type: Boolean,
-    description: 'Admin üçün bütün dillər',
-  })
-  @ApiHeader({
-    name: 'accept-language',
-    required: true,
-    description: 'Dil seçimi üçün header (az, en, ru)',
-  })
+  @ApiQuery({ name: 'allLanguages', required: false, type: Boolean, description: 'Admin üçün bütün dillər' })
   @ApiResponse({ status: 200, description: 'List of gallery categories' })
   findAll(
     @Query('allLanguages') allLanguages?: boolean,
-    @Headers('accept-language') acceptLanguage?: string,
+    @Headers('accept-language') acceptLanguage?: string
   ) {
     if (allLanguages) {
       return this.galleryCategoryService.findAllForAdmin();
@@ -52,17 +40,12 @@ export class GalleryCategoryController {
 
   @Get(':id')
   @ApiOperation({ summary: 'Get gallery category by id' })
-  @ApiQuery({
-    name: 'allLanguages',
-    required: false,
-    type: Boolean,
-    description: 'Admin üçün bütün dillər',
-  })
+  @ApiQuery({ name: 'allLanguages', required: false, type: Boolean, description: 'Admin üçün bütün dillər' })
   @ApiResponse({ status: 200, description: 'Gallery category detail' })
   findOne(
     @Param('id') id: number,
     @Query('allLanguages') allLanguages?: boolean,
-    @Headers('accept-language') acceptLanguage?: string,
+    @Headers('accept-language') acceptLanguage?: string
   ) {
     if (allLanguages) {
       return this.galleryCategoryService.findOneForAdmin(id);

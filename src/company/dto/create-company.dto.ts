@@ -3,9 +3,10 @@ import { ApiProperty } from '@nestjs/swagger';
 import { Transform } from 'class-transformer';
 
 export class CreateCompanyDto {
-  @ApiProperty({ 
+  @ApiProperty({
     example: { az: 'Şirkət', en: 'Company', ru: 'Компания' },
-    description: 'JSON string formatında gönderin: {"az":"Şirkət","en":"Company","ru":"Компания"}'
+    description:
+      'JSON string formatında gönderin: {"az":"Şirkət","en":"Company","ru":"Компания"}',
   })
   @Transform(({ value }) => {
     if (typeof value === 'string') {
@@ -21,10 +22,11 @@ export class CreateCompanyDto {
   @IsNotEmpty()
   title: { az: string; en?: string; ru?: string };
 
-  @ApiProperty({ 
+  @ApiProperty({
     example: { az: 'Təsvir', en: 'Description', ru: 'Описание' },
     required: false,
-    description: 'JSON string formatında gönderin: {"az":"Təsvir","en":"Description","ru":"Описание"}'
+    description:
+      'JSON string formatında gönderin: {"az":"Təsvir","en":"Description","ru":"Описание"}',
   })
   @Transform(({ value }) => {
     if (typeof value === 'string') {
@@ -40,10 +42,10 @@ export class CreateCompanyDto {
   @IsObject()
   description?: { az: string; en?: string; ru?: string };
 
-  @ApiProperty({ 
-    required: false, 
-    type: [Number], 
-    description: 'Əlaqəli category id-ləri - JSON array formatında: [1,2,3]' 
+  @ApiProperty({
+    required: false,
+    type: [Number],
+    description: 'Əlaqəli category id-ləri - JSON array formatında: [1,2,3]',
   })
   @Transform(({ value }) => {
     if (typeof value === 'string') {
@@ -58,12 +60,36 @@ export class CreateCompanyDto {
   @IsOptional()
   categoryIds?: number[];
 
-  @ApiProperty({ 
-    type: 'string', 
-    format: 'binary', 
-    required: false, 
-    description: 'Logo faylı (file)' 
+  @ApiProperty({
+    type: 'string',
+    format: 'binary',
+    required: false,
+    description: 'Logo faylı (file)',
   })
   @IsOptional()
   logo?: any;
+
+  @ApiProperty({
+    example: {
+      az: 'Logo alt mətn',
+      en: 'Logo alt text',
+      ru: 'Альт текст логотипа',
+    },
+    required: false,
+    description:
+      'Logo üçün alt mətn - JSON string formatında: {"az":"Logo alt mətn","en":"Logo alt text","ru":"Альт текст логотипа"}',
+  })
+  @Transform(({ value }) => {
+    if (typeof value === 'string') {
+      try {
+        return JSON.parse(value);
+      } catch {
+        return value;
+      }
+    }
+    return value;
+  })
+  @IsOptional()
+  @IsObject()
+  altText?: { az: string; en?: string; ru?: string };
 }

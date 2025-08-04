@@ -11,13 +11,14 @@ import { CategoryModule } from './category/category.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProductModule } from './product/product.module';
+import { I18nMiddleware } from './i18n/i18n.middleware';
 import { GalleryCategoryModule } from './gallery-category/gallery-category.module';
 import { GalleryItemModule } from './gallery-item/gallery-item.module';
 import { ContactModule } from './contact/contact.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ isGlobal: true}),
+    ConfigModule.forRoot({ isGlobal: true }),
     TypeOrmModule.forRootAsync(typeOrmConfig),
     PassportModule.register({ defaultStrategy: 'jwt' }),
     I18nModule,
