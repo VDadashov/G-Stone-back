@@ -1,144 +1,148 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
-import { Company } from '../_common/entities/company.entity';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Put,
+  Delete,
+  Query,
+  UseGuards,
+  UploadedFile,
+  UseInterceptors,
+  UseFilters,
+  Headers,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiResponse,
+  ApiOperation,
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiBody,
+  ApiQuery,
+} from '@nestjs/swagger';
+import { CompanyService } from './company.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
-import { slugify } from '../_common/utils/slugify';
-import { I18nService } from '../i18n/i18n.service';
-import { Category } from '../_common/entities/category.entity';
+import { Lang } from '../i18n/i18n.decorator';
+import { JwtAuthGuard } from '../_common/guards/jwt-auth.guard';
+import { Roles } from '../_common/decorators/roles.decorator';
+import { RolesGuard } from '../_common/guards/roles.guard';
+import { FileInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import { MulterExceptionFilter } from '../_common/filters/multer-exception.filter';
+import {
+  imageFileFilter,
+  imageMaxSize,
+} from '../_common/utils/file-validation.util';
+import { fileNameEdit } from '../_common/utils/file-name-edit.util';
 
-@Injectable()
-export class CompanyService {
-  constructor(
-    @InjectRepository(Company)
-    private readonly companyRepo: Repository<Company>,
-    private readonly i18n: I18nService,
-    @InjectRepository(Category)
-    private readonly categoryRepo: Repository<Category>,
-  ) {}
+@ApiTags('Company')
+@Controller('company')
+export class CompanyController {
+  constructor(private readonly companyService: CompanyService) {}
 
-  async create(dto: CreateCompanyDto, logo?: any) {
-    const company = this.companyRepo.create(dto);
-    company.slug = dto.title && dto.title.az ? slugify(dto.title.az) : '';
-    if (logo) {
-      company.logo = `/uploads/images/${logo.filename}`;
+  @Post()
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Create company' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: CreateCompanyDto })
+  @ApiResponse({ status: 201, description: 'Company created' })
+  @UseInterceptors(
+    FileInterceptor('logo', {
+      storage: diskStorage({
+        destination: './public/uploads/images',
+        filename: fileNameEdit,
+      }),
+      fileFilter: imageFileFilter,
+      limits: { fileSize: imageMaxSize },
+    }),
+  )
+  @UseFilters(MulterExceptionFilter)
+  create(@Body() dto: CreateCompanyDto, @UploadedFile() logo?: any) {
+    // @Transform dekoratorları avtomatik işləyəcək
+    // Manual parse artıq lazım deyil
+    return this.companyService.create(dto, logo);
+  }
+
+  @Get()
+  @ApiOperation({ summary: 'Get all companies' })
+  @ApiQuery({
+    name: 'allLanguages',
+    required: false,
+    type: Boolean,
+    description: 'Admin üçün bütün dillər',
+  })
+  @ApiResponse({ status: 200, description: 'List of companies' })
+  findAll(
+    @Query('allLanguages') allLanguages?: boolean,
+    @Headers('accept-language') acceptLanguage?: string,
+  ) {
+    if (allLanguages) {
+      return this.companyService.findAllForAdmin();
     }
-    if (dto.categoryIds && dto.categoryIds.length > 0) {
-      const categories = await this.categoryRepo.findByIds(dto.categoryIds);
-      if (categories.length !== dto.categoryIds.length)
-        throw new NotFoundException('Bəzi category id-lər tapılmadı');
-      company.categories = categories;
+    return this.companyService.findAll(acceptLanguage);
+  }
+
+  @Get(':id')
+  @ApiOperation({ summary: 'Get company by id' })
+  @ApiQuery({
+    name: 'allLanguages',
+    required: false,
+    type: Boolean,
+    description: 'Admin üçün bütün dillər',
+  })
+  @ApiResponse({ status: 200, description: 'Company detail' })
+  findOne(
+    @Param('id') id: number,
+    @Query('allLanguages') allLanguages?: boolean,
+    @Headers('accept-language') acceptLanguage?: string,
+  ) {
+    if (allLanguages) {
+      return this.companyService.findOneForAdmin(id);
     }
-    return this.companyRepo.save(company);
+    return this.companyService.findOne(id, acceptLanguage);
   }
 
-  async findAll(lang?: string) {
-    lang = lang || 'az';
-    const companies = await this.companyRepo.find({
-      relations: ['categories'],
-    });
-
-    return companies.map((c) => {
-      return {
-        ...c,
-        categories:
-          c.categories?.map((category) => ({
-            id: category.id,
-            title: this.i18n.translateField(category.title, lang),
-          })) || [],
-        title: this.i18n.translateField(c.title, lang),
-        description: this.i18n.translateField(c.description, lang),
-        altText: this.i18n.translateField(c.altText, lang),
-      };
-    });
+  @Put(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Update company' })
+  @ApiConsumes('multipart/form-data')
+  @ApiBody({ type: UpdateCompanyDto })
+  @ApiResponse({ status: 200, description: 'Company updated' })
+  @UseInterceptors(
+    FileInterceptor('logo', {
+      storage: diskStorage({
+        destination: './public/uploads/images',
+        filename: fileNameEdit,
+      }),
+      fileFilter: imageFileFilter,
+      limits: { fileSize: imageMaxSize },
+    }),
+  )
+  @UseFilters(MulterExceptionFilter)
+  update(
+    @Param('id') id: number,
+    @Body() dto: UpdateCompanyDto,
+    @UploadedFile() logo?: any,
+  ) {
+    // @Transform dekoratorları avtomatik işləyəcək
+    // Manual parse artıq lazım deyil
+    return this.companyService.update(id, dto, logo);
   }
 
-  async findOne(id: number, lang?: string) {
-    lang = lang || 'az';
-    const company = await this.companyRepo.findOne({
-      where: { id },
-      relations: ['categories'],
-    });
-    if (!company) throw new NotFoundException('Company not found');
-
-    return {
-      ...company,
-      categories: company.categories?.map((category) => category.id) || [],
-      title: this.i18n.translateField(company.title, lang),
-      description: this.i18n.translateField(company.description, lang),
-      altText: this.i18n.translateField(company.altText, lang),
-    };
-  }
-
-  async update(id: number, dto: UpdateCompanyDto, logo?: any) {
-    const company = await this.companyRepo.findOneBy({ id });
-    if (!company) throw new NotFoundException('Company not found');
-    const oldTitleAz = company.title?.az;
-    Object.assign(company, dto);
-    if (dto.title && dto.title.az && dto.title.az !== oldTitleAz) {
-      company.slug = slugify(dto.title.az);
-    }
-    if (logo) {
-      company.logo = `/uploads/images/${logo.filename}`;
-    }
-    if (dto.categoryIds && dto.categoryIds.length > 0) {
-      const categories = await this.categoryRepo.findByIds(dto.categoryIds);
-      if (categories.length !== dto.categoryIds.length)
-        throw new NotFoundException('Bəzi category id-lər tapılmadı');
-      company.categories = categories;
-    }
-    return this.companyRepo.save(company);
-  }
-
-  async remove(id: number) {
-    const company = await this.companyRepo.findOneBy({ id });
-    if (!company) throw new NotFoundException('Company not found');
-    await this.companyRepo.remove(company);
-    return { deleted: true };
-  }
-
-  async uploadLogo(id: number, file: Express.Multer.File) {
-    const company = await this.companyRepo.findOneBy({ id });
-    if (!company) throw new NotFoundException('Company not found');
-    company.logo = `/uploads/images/${file.filename}`;
-    await this.companyRepo.save(company);
-    return { logo: company.logo };
-  }
-
-  async findAllForAdmin() {
-    const companies = await this.companyRepo.find({
-      relations: ['categories'],
-    });
-    return companies.map((c) => ({
-      ...c,
-      categories:
-        c.categories?.map((category) => ({
-          id: category.id,
-          title: category.title, // bütün dillər
-        })) || [],
-      title: c.title, // bütün dillər
-      description: c.description, // bütün dillər
-      altText: c.altText, // bütün dillər
-    }));
-  }
-
-  async findOneForAdmin(id: number) {
-    const company = await this.companyRepo.findOne({
-      where: { id },
-      relations: ['categories'],
-    });
-    if (!company) throw new NotFoundException('Company not found');
-    return {
-      ...company,
-      categories:
-        company.categories?.map((category) => ({
-          id: category.id,
-          title: category.title, // bütün dillər
-        })) || [],
-      title: company.title, // bütün dillər
-      description: company.description, // bütün dillər
-      altText: company.altText, // bütün dillər
-    };
+  @Delete(':id')
+  @ApiBearerAuth()
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles('admin')
+  @ApiOperation({ summary: 'Delete company' })
+  @ApiResponse({ status: 200, description: 'Company deleted' })
+  remove(@Param('id') id: number) {
+    return this.companyService.remove(id);
   }
 }
