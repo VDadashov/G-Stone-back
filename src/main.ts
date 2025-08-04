@@ -15,7 +15,7 @@ async function bootstrap() {
   app.setGlobalPrefix('api');
 
   // Static files serve edilməsi - BU HİSSƏ ƏLAVƏ EDİLDİ
-  app.useStaticAssets(join(__dirname, '..', 'uploads'), {
+  app.useStaticAssets(join(__dirname, '..', 'public', 'uploads'), {
     prefix: '/uploads/',
   });
 

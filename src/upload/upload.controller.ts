@@ -26,7 +26,7 @@ export class UploadController {
   @ApiResponse({ status: 201, description: 'Şəkil uğurla yükləndi' })
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: './uploads/images',
+      destination: './public/uploads/images',
       filename: fileNameEdit,
     }),
     fileFilter: imageFileFilter,
@@ -44,7 +44,7 @@ export class UploadController {
   @ApiResponse({ status: 201, description: 'PDF uğurla yükləndi' })
   @UseInterceptors(FileInterceptor('file', {
     storage: diskStorage({
-      destination: './uploads/pdfs',
+      destination: './public/uploads/pdfs',
       filename: fileNameEdit,
     }),
     fileFilter: pdfFileFilter,
