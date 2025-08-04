@@ -17,7 +17,7 @@ export const typeOrmConfig: TypeOrmModuleAsyncOptions = {
         url: databaseUrl,
         entities: [__dirname + '/../**/*.entity{.ts,.js}'],
         autoLoadEntities: true,
-        synchronize: isDevelopment, // Production-da false olmalıdır!
+        synchronize: true, // Production-da false olmalıdır!
         ssl: !isDevelopment ? { rejectUnauthorized: false } : false,
         retryAttempts: 10,
         retryDelay: 3000,
