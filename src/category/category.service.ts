@@ -7,6 +7,7 @@ import { UpdateCategoryDto } from './dto/update-category.dto';
 import { slugify } from '../_common/utils/slugify';
 import { I18nService } from '../i18n/i18n.service';
 import { Company } from '../_common/entities/company.entity';
+import { ConfigService } from '@nestjs/config';
 
 @Injectable()
 export class CategoryService {
@@ -16,7 +17,14 @@ export class CategoryService {
     private readonly i18n: I18nService,
     @InjectRepository(Company)
     private readonly companyRepo: Repository<Company>,
+    private readonly configService: ConfigService,
   ) {}
+
+  private getFullImageUrl(logoPath: string): string | null {
+    if (!logoPath) return null;
+    const baseUrl = this.configService.get<string>('BASE_URL');
+    return `${baseUrl}${logoPath}`;
+  }
 
   async create(dto: CreateCategoryDto) {
     const category = this.categoryRepo.create(dto);
@@ -45,7 +53,7 @@ export class CategoryService {
         c.companies?.map((company) => ({
           id: company.id,
           name: this.i18n.translateField(company.title, lang),
-          logo: company.logo,
+          logo: this.getFullImageUrl(company.logo),
           slug: company.slug,
           // Digər company field-ləri də lazım olduqca əlavə edə bilərsiniz
         })) || [],
@@ -79,7 +87,7 @@ export class CategoryService {
         category.companies?.map((company) => ({
           id: company.id,
           name: this.i18n.translateField(company.title, lang),
-          logo: company.logo,
+          logo: this.getFullImageUrl(company.logo),
           slug: company.slug,
           // Digər company field-ləri də lazım olduqca əlavə edə bilərsiniz
         })) || [],
