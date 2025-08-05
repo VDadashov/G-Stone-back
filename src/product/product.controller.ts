@@ -129,10 +129,23 @@ export class ProductController {
     return this.productService.create(dto);
   }
 
+  // Controller method
   @Get()
   @ApiOperation({ summary: 'Get all products' })
   @ApiResponse({ status: 200, description: 'List of products' })
-  findAll(@Headers('accept-language') acceptLanguage?: string) {
+  @ApiQuery({
+    name: 'allLanguages',
+    required: false,
+    type: Boolean,
+    description: 'Return all languages or filtered by accept-language header',
+  })
+  findAll(
+    @Query('allLanguages') allLanguages?: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ) {
+    if (allLanguages === 'true') {
+      return this.productService.findAllForAdmin();
+    }
     return this.productService.findAll(acceptLanguage);
   }
 
@@ -174,10 +187,20 @@ export class ProductController {
   @Get(':id')
   @ApiOperation({ summary: 'Get product by id' })
   @ApiResponse({ status: 200, description: 'Product detail' })
+  @ApiQuery({
+    name: 'allLanguages',
+    required: false,
+    type: Boolean,
+    description: 'Return all languages or filtered by accept-language header',
+  })
   findOne(
     @Param('id') id: number,
+    @Query('allLanguages') allLanguages?: string,
     @Headers('accept-language') acceptLanguage?: string,
   ) {
+    if (allLanguages === 'true') {
+      return this.productService.findOneForAdmin(id);
+    }
     return this.productService.findOne(id, acceptLanguage);
   }
 
