@@ -23,8 +23,11 @@ export class CategoryService {
     // Slug avtomatik generasiya yalnız title.az-a əsasən
     category.slug = dto.title && dto.title.az ? slugify(dto.title.az) : '';
     if (dto.parentId) {
-      const parentCategory = await this.categoryRepo.findOneBy({ id: dto.parentId });
-      if (!parentCategory) throw new BadRequestException('Parent category tapılmadı');
+      const parentCategory = await this.categoryRepo.findOneBy({
+        id: dto.parentId,
+      });
+      if (!parentCategory)
+        throw new BadRequestException('Parent category tapılmadı');
       category.parent = parentCategory;
     }
     return this.categoryRepo.save(category);
@@ -32,26 +35,66 @@ export class CategoryService {
 
   async findAll(lang?: string) {
     lang = lang || 'az';
-    const categories = await this.categoryRepo.find({ relations: ['parent', 'children', 'companies'] });
+    const categories = await this.categoryRepo.find({
+      relations: ['parent', 'children', 'companies'],
+    });
+
     return categories.map((c) => ({
       ...c,
-      companies: c.companies?.map(company => company.id) || [],
+      companies:
+        c.companies?.map((company) => ({
+          id: company.id,
+          name: this.i18n.translateField(company.title, lang),
+          logo: company.logo,
+          slug: company.slug,
+          // Digər company field-ləri də lazım olduqca əlavə edə bilərsiniz
+        })) || [],
       title: this.i18n.translateField(c.title, lang),
-      parent: c.parent ? { id: c.parent.id, title: this.i18n.translateField(c.parent.title, lang) } : null,
-      children: c.children?.map(child => ({ id: child.id, title: this.i18n.translateField(child.title, lang) })) || [],
+      parent: c.parent
+        ? {
+            id: c.parent.id,
+            title: this.i18n.translateField(c.parent.title, lang),
+          }
+        : null,
+      children:
+        c.children?.map((child) => ({
+          id: child.id,
+          title: this.i18n.translateField(child.title, lang),
+        })) || [],
     }));
   }
 
   async findOne(id: number, lang?: string) {
     lang = lang || 'az';
-    const category = await this.categoryRepo.findOne({ where: { id }, relations: ['parent', 'children', 'companies'] });
+    const category = await this.categoryRepo.findOne({
+      where: { id },
+      relations: ['parent', 'children', 'companies'],
+    });
+
     if (!category) throw new NotFoundException('Category not found');
+
     return {
       ...category,
-      companies: category.companies?.map(company => company.id) || [],
+      companies:
+        category.companies?.map((company) => ({
+          id: company.id,
+          name: this.i18n.translateField(company.title, lang),
+          logo: company.logo,
+          slug: company.slug,
+          // Digər company field-ləri də lazım olduqca əlavə edə bilərsiniz
+        })) || [],
       title: this.i18n.translateField(category.title, lang),
-      parent: category.parent ? { id: category.parent.id, title: this.i18n.translateField(category.parent.title, lang) } : null,
-      children: category.children?.map(child => ({ id: child.id, title: this.i18n.translateField(child.title, lang) })) || [],
+      parent: category.parent
+        ? {
+            id: category.parent.id,
+            title: this.i18n.translateField(category.parent.title, lang),
+          }
+        : null,
+      children:
+        category.children?.map((child) => ({
+          id: child.id,
+          title: this.i18n.translateField(child.title, lang),
+        })) || [],
     };
   }
 
@@ -65,8 +108,11 @@ export class CategoryService {
       category.slug = slugify(dto.title.az);
     }
     if (dto.parentId) {
-      const parentCategory = await this.categoryRepo.findOneBy({ id: dto.parentId });
-      if (!parentCategory) throw new BadRequestException('Parent category tapılmadı');
+      const parentCategory = await this.categoryRepo.findOneBy({
+        id: dto.parentId,
+      });
+      if (!parentCategory)
+        throw new BadRequestException('Parent category tapılmadı');
       category.parent = parentCategory;
     }
     return this.categoryRepo.save(category);
@@ -80,31 +126,46 @@ export class CategoryService {
   }
 
   async findAllForAdmin() {
-    const categories = await this.categoryRepo.find({ relations: ['parent', 'children', 'companies'] });
+    const categories = await this.categoryRepo.find({
+      relations: ['parent', 'children', 'companies'],
+    });
     return categories.map((c) => ({
       ...c,
-      companies: c.companies?.map(company => ({
-        id: company.id,
-        title: company.title
-      })) || [],
+      companies:
+        c.companies?.map((company) => ({
+          id: company.id,
+          title: company.title,
+        })) || [],
       title: c.title,
       parent: c.parent ? { id: c.parent.id, title: c.parent.title } : null,
-      children: c.children?.map(child => ({ id: child.id, title: child.title })) || [],
+      children:
+        c.children?.map((child) => ({ id: child.id, title: child.title })) ||
+        [],
     }));
   }
 
   async findOneForAdmin(id: number) {
-    const category = await this.categoryRepo.findOne({ where: { id }, relations: ['parent', 'children', 'companies'] });
+    const category = await this.categoryRepo.findOne({
+      where: { id },
+      relations: ['parent', 'children', 'companies'],
+    });
     if (!category) throw new NotFoundException('Category not found');
     return {
       ...category,
-      companies: category.companies?.map(company => ({
-        id: company.id,
-        title: company.title
-      })) || [],
+      companies:
+        category.companies?.map((company) => ({
+          id: company.id,
+          title: company.title,
+        })) || [],
       title: category.title,
-      parent: category.parent ? { id: category.parent.id, title: category.parent.title } : null,
-      children: category.children?.map(child => ({ id: child.id, title: child.title })) || [],
+      parent: category.parent
+        ? { id: category.parent.id, title: category.parent.title }
+        : null,
+      children:
+        category.children?.map((child) => ({
+          id: child.id,
+          title: child.title,
+        })) || [],
     };
   }
 } 
