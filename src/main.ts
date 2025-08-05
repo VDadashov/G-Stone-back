@@ -14,10 +14,17 @@ async function bootstrap() {
   // API prefix əlavə edilir
   app.setGlobalPrefix('api');
 
-  // Static files serve edilməsi - BU HİSSƏ ƏLAVƏ EDİLDİ
   app.useStaticAssets(join(__dirname, '..', 'public', 'uploads'), {
     prefix: '/uploads/',
   });
+
+  app.enableCors({
+    origin: ['https://lighthearted-semifreddo-f48916.netlify.app'],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
+  });
+
 
   // Global validation pipe
   app.useGlobalPipes(

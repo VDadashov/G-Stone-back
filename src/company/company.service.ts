@@ -1,6 +1,6 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { In, Repository } from 'typeorm';
 import { ConfigService } from '@nestjs/config';
 import { Company } from '../_common/entities/company.entity';
 import { CreateCompanyDto } from './dto/create-company.dto';
@@ -29,20 +29,32 @@ export class CompanyService {
   async create(dto: CreateCompanyDto, logo?: any) {
     const company = this.companyRepo.create(dto);
     company.slug = dto.title && dto.title.az ? slugify(dto.title.az) : '';
+
     if (logo) {
       company.logo = `/uploads/images/${logo.filename}`;
     }
+
     if (dto.categoryIds && dto.categoryIds.length > 0) {
-      const categories = await this.categoryRepo.findByIds(dto.categoryIds);
-      if (categories.length !== dto.categoryIds.length)
+
+      const categories = await this.categoryRepo.find({
+        where: { id: In(dto.categoryIds) },
+      });
+
+      if (categories.length !== dto.categoryIds.length) {
         throw new NotFoundException('Bəzi category id-lər tapılmadı');
+      }
+
       company.categories = categories;
     }
 
     const savedCompany = await this.companyRepo.save(company);
 
+    const result = await this.companyRepo.findOne({
+      where: { id: savedCompany.id },
+      relations: ['categories'],
+    });
     return {
-      ...savedCompany,
+      ...result,
       logo: this.getFullImageUrl(savedCompany.logo),
     };
   }

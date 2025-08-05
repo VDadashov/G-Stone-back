@@ -63,8 +63,6 @@ export class CompanyController {
   )
   @UseFilters(MulterExceptionFilter)
   create(@Body() dto: CreateCompanyDto, @UploadedFile() logo?: any) {
-    // @Transform dekoratorları avtomatik işləyəcək
-    // Manual parse artıq lazım deyil
     return this.companyService.create(dto, logo);
   }
 
