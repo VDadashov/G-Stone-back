@@ -17,7 +17,10 @@ async function bootstrap() {
 
   // CORS konfiqurasiyası
   app.enableCors({
-    origin: ['https://lighthearted-semifreddo-f48916.netlify.app'],
+    origin: [
+      'https://lighthearted-semifreddo-f48916.netlify.app',
+      'http://localhost:5173',
+    ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
