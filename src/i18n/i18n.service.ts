@@ -11,7 +11,6 @@ export class I18nService {
     return i18nConfig.defaultLanguage;
   }
 
-  // Multi-lang field-lər üçün util: { az: '...', en: '...', ru: '...' }
   translateField(field: any, lang: string): string {
     if (!field) return '';
     if (typeof field === 'object' && field[lang]) return field[lang];

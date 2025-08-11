@@ -4,16 +4,32 @@ import { existsSync, mkdirSync } from 'fs';
 
 @Injectable()
 export class UploadService {
-  saveFile(file: Express.Multer.File, folder: 'images' | 'pdfs') {
+  saveFile(file: Express.Multer.File, folder: 'images' | 'pdfs' | 'videos') {
     const uploadPath = join(process.cwd(), 'public', 'uploads', folder);
     if (!existsSync(uploadPath)) {
       mkdirSync(uploadPath, { recursive: true });
     }
+
+    const baseUrl = process.env.BASE_URL || '';
+    const fileUrl = `${baseUrl}/uploads/${folder}/${file.filename}`;
+
     return {
-      url: `/uploads/${folder}/${file.filename}`,
-      originalName: file.originalname,
-      mimetype: file.mimetype,
-      size: file.size,
+      media: {
+        alt: {
+          az: file.originalname,
+          en: file.originalname,
+          ru: file.originalname,
+        },
+        url: fileUrl,
+        size: file.size,
+        type:
+          folder === 'videos'
+            ? 'video'
+            : folder === 'images'
+              ? 'image'
+              : 'file',
+        mimeType: file.mimetype,
+      },
     };
   }
-} 
+}

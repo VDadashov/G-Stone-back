@@ -28,7 +28,6 @@ export class CategoryService {
 
   async create(dto: CreateCategoryDto) {
     const category = this.categoryRepo.create(dto);
-    // Slug avtomatik generasiya yalnız title.az-a əsasən
     category.slug = dto.title && dto.title.az ? slugify(dto.title.az) : '';
     if (dto.parentId) {
       const parentCategory = await this.categoryRepo.findOneBy({

@@ -8,9 +8,6 @@ import { join } from 'path';
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
-  // CORS aktivləşdirilməsi
-  app.enableCors();
-
   // API prefix əlavə edilir
   app.setGlobalPrefix('api');
 
@@ -18,6 +15,7 @@ async function bootstrap() {
     prefix: '/uploads/',
   });
 
+  // CORS konfiqurasiyası
   app.enableCors({
     origin: ['https://lighthearted-semifreddo-f48916.netlify.app'],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
@@ -25,13 +23,17 @@ async function bootstrap() {
     credentials: true,
   });
 
-
-  // Global validation pipe
+  // Global validation pipe - YENİLƏNMİŞ
   app.useGlobalPipes(
     new ValidationPipe({
-      whitelist: true,
+      whitelist: false,
       forbidNonWhitelisted: true,
       transform: true,
+      transformOptions: {
+        enableImplicitConversion: true,
+        enableCircularCheck: true,
+        excludeExtraneousValues: false, // Bu da vacibdir
+      },
     }),
   );
 

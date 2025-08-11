@@ -11,10 +11,11 @@ import { CategoryModule } from './category/category.module';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { ProductModule } from './product/product.module';
-import { I18nMiddleware } from './i18n/i18n.middleware';
 import { GalleryCategoryModule } from './gallery-category/gallery-category.module';
 import { GalleryItemModule } from './gallery-item/gallery-item.module';
 import { ContactModule } from './contact/contact.module';
+import { PageModule } from './page/page.module';
+import { SectionModule } from './section/section.module';
 
 @Module({
   imports: [
@@ -31,6 +32,8 @@ import { ContactModule } from './contact/contact.module';
     GalleryCategoryModule,
     GalleryItemModule,
     ContactModule,
+    PageModule,
+    SectionModule,
   ],
   controllers: [AppController],
   providers: [AppService],
