@@ -21,6 +21,7 @@ async function bootstrap() {
     origin: [
       'https://lighthearted-semifreddo-f48916.netlify.app',
       'http://localhost:5173',
+      'http://localhost:5174',
       'https://gstone-backend.onrender.com',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
