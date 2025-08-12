@@ -22,7 +22,7 @@ async function bootstrap() {
       'https://lighthearted-semifreddo-f48916.netlify.app',
       'http://localhost:5173',
       'http://localhost:5174',
-      'https://gstone-backend.onrender.com',
+      'https://gstone-admin.netlify.app',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: [
@@ -32,9 +32,7 @@ async function bootstrap() {
       'Accept-Language',
       'Accept-Encoding',
       'Origin',
-      'X-Requested-With',
-      'XMLHttpRequest',
-    ],
+      'X-Requested-With',    ],
     credentials: true,
   });
 
