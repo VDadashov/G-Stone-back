@@ -7,9 +7,10 @@ import {
   Param,
   Query,
   Body,
+  Headers,
   ParseIntPipe,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse } from '@nestjs/swagger';
+import { ApiTags, ApiOperation, ApiResponse, ApiQuery } from '@nestjs/swagger';
 import { SectionService } from './section.service';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
@@ -29,11 +30,42 @@ export class SectionController {
 
   @Get()
   @ApiOperation({
-    summary: 'Bütün section-ları gətir (istəyə görə pageId filter)',
+    summary: 'Bütün section-ları gətir (müxtəlif filterlər ilə)',
+  })
+  @ApiQuery({
+    name: 'pageId',
+    required: false,
+    type: Number,
+    description: 'Müəyyən page-ə aid section-lar',
+  })
+  @ApiQuery({
+    name: 'type',
+    required: false,
+    type: String,
+    description: 'Section tipinə görə filter (məs: header, footer, hero)',
+  })
+  @ApiQuery({
+    name: 'allLanguages',
+    required: false,
+    type: Boolean,
+    description: 'Admin üçün bütün dillər',
   })
   @ApiResponse({ status: 200, type: [Section] })
-  async findAll(@Query('pageId') pageId?: string): Promise<Section[]> {
-    return this.sectionService.findAll(pageId ? Number(pageId) : undefined);
+  async findAll(
+    @Query('pageId') pageId?: string,
+    @Query('type') type?: string,
+    @Query('allLanguages') allLanguages?: boolean,
+    @Headers('accept-language') acceptLanguage?: string,
+  ): Promise<Section[]> {
+    if (allLanguages) {
+      return await this.sectionService.findAllForAdmin();
+    }
+
+    return this.sectionService.findAllWithSelectedLanguage(
+      pageId ? Number(pageId) : undefined,
+      type,
+      acceptLanguage,
+    );
   }
 
   @Get(':id')

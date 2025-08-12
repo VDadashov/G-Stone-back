@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Section } from '../_common/entities/section.entity';
@@ -71,13 +75,103 @@ export class SectionService {
     }
   }
 
-  // 🔹 Bütün Section-ları gətirmək (opsional: pageId filter)
-  async findAll(pageId?: number): Promise<Section[]> {
-    const where = pageId ? { pageId } : {};
-    return await this.sectionRepository.find({
-      where,
-      order: { order: 'ASC', createdAt: 'DESC' },
+  // 🔹 Bütün Section-ları gətirmək (filters il
+
+  // Alternative approach: Return only the selected language content
+  // Alternative approach: Return only the selected language content
+  async findAllWithSelectedLanguage(
+    pageId?: number,
+    type?: string,
+    acceptLanguage: string = 'az',
+  ): Promise<any[]> {
+    // Changed return type to any[] instead of Partial<Section>[]
+    try {
+      console.log('findAllWithSelectedLanguage called with:', {
+        pageId,
+        type,
+        acceptLanguage,
+      });
+
+      const where: any = { isActive: true };
+
+      if (pageId) {
+        where.pageId = pageId;
+      }
+
+      if (type) {
+        where.type = type;
+      }
+
+      const sections = await this.sectionRepository.find({
+        where,
+        order: { order: 'ASC', createdAt: 'DESC' },
+      });
+
+      // Return sections with only the selected language content
+      const filteredSections = sections.map((section) => ({
+        id: section.id,
+        name: section.name,
+        type: section.type,
+        order: section.order,
+        pageId: section.pageId,
+        isActive: section.isActive,
+        createdAt: section.createdAt,
+        updatedAt: section.updatedAt,
+        title: section.title?.[acceptLanguage] || '',
+        description: section.description?.[acceptLanguage] || '',
+        media: section.media
+          ? {
+              ...section.media,
+              alt: section.media.alt?.[acceptLanguage] || '',
+            }
+          : section.media,
+        additionalData: section.additionalData
+          ? this.filterAdditionalDataForLanguage(
+              section.additionalData,
+              acceptLanguage,
+            )
+          : section.additionalData,
+      }));
+
+      return filteredSections;
+    } catch (error) {
+      console.error('Error in findAllWithSelectedLanguage:', error);
+      throw error;
+    }
+  }
+
+  private filterAdditionalDataForLanguage(
+    additionalData: any,
+    language: string,
+  ): any {
+    const filtered = { ...additionalData };
+
+    Object.keys(filtered).forEach((key) => {
+      if (
+        filtered[key] &&
+        typeof filtered[key] === 'object' &&
+        filtered[key].hasOwnProperty(language)
+      ) {
+        filtered[key] = filtered[key][language];
+      }
     });
+
+    return filtered;
+  }
+
+  // 🔹 Admin üçün bütün section-ları gətirmək
+  async findAllForAdmin(): Promise<Section[]> {
+    try {
+      console.log('findAllForAdmin called');
+      const sections = await this.sectionRepository.find({
+        order: { order: 'ASC', createdAt: 'DESC' },
+      });
+      console.log(`findAllForAdmin found ${sections.length} sections`);
+      return sections;
+    } catch (error) {
+      console.error('Error in findAllForAdmin:', error);
+      throw error;
+    }
   }
 
   // 🔹 ID ilə tapmaq
