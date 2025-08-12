@@ -33,6 +33,7 @@ async function bootstrap() {
       'Accept-Encoding',
       'Origin',
       'X-Requested-With',
+      'XMLHttpRequest',
     ],
     credentials: true,
   });
