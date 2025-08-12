@@ -97,15 +97,17 @@ export class CreateSectionDto {
   @IsBoolean()
   isActive?: boolean = true;
 
-  @ApiPropertyOptional()
+  // Media field - nullable
+  @ApiPropertyOptional({ nullable: true, default: null })
   @IsOptional()
   @ValidateNested()
   @Type(() => MediaFile)
-  media?: MediaFile | null;
+  media?: MediaFile | null = null;
 
-  @ApiPropertyOptional()
+  // AdditionalData field - nullable
+  @ApiPropertyOptional({ nullable: true, default: null })
   @IsOptional()
   @ValidateNested()
   @Type(() => AdditionalData)
-  additionalData?: AdditionalData | null;
+  additionalData?: AdditionalData | null = null;
 }

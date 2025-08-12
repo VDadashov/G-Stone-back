@@ -37,14 +37,36 @@ export class SectionService {
         createSectionDto.order = lastSection ? lastSection.order + 1 : 0;
       }
 
-      const section = this.sectionRepository.create(createSectionDto);
+      // Media və additionalData null handling
+      const sectionData = {
+        ...createSectionDto,
+        media: createSectionDto.media || null,
+        additionalData: createSectionDto.additionalData || null,
+      };
+
+      const section = this.sectionRepository.create(sectionData);
       const savedSection = await this.sectionRepository.save(section);
 
       return savedSection;
     } catch (error) {
+      console.error('Section create error:', error);
+
       if (error instanceof NotFoundException) {
         throw error;
       }
+
+      // Validation error-ları daha dəqiq göstər
+      if (
+        error.name === 'ValidationError' ||
+        error.response?.statusCode === 400
+      ) {
+        throw new BadRequestException({
+          message:
+            error.response?.message || error.message || 'Validation failed',
+          details: error.response?.details || null,
+        });
+      }
+
       throw new BadRequestException('Section yaradılarkən xəta baş verdi');
     }
   }

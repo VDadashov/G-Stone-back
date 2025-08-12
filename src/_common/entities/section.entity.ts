@@ -30,10 +30,10 @@ export class Section extends BaseEntity {
   description: MultiLanguageText;
 
   @Column({ type: 'jsonb', nullable: true })
-  media: MediaFile | null;
+  media?: MediaFile | null;
 
   @Column({ type: 'jsonb', nullable: true })
-  additionalData: AdditionalData | null;
+  additionalData?: AdditionalData | null;
 
   @Column({ default: 0 })
   order: number;
