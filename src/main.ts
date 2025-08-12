@@ -16,13 +16,23 @@ async function bootstrap() {
   });
 
   // CORS konfiqurasiyası
+  // CORS konfiqurasiyası
   app.enableCors({
     origin: [
       'https://lighthearted-semifreddo-f48916.netlify.app',
       'http://localhost:5173',
+      'https://gstone-backend.onrender.com',
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'Accept',
+      'Accept-Language',
+      'Accept-Encoding',
+      'Origin',
+      'X-Requested-With',
+    ],
     credentials: true,
   });
 
