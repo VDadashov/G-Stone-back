@@ -32,7 +32,8 @@ async function bootstrap() {
       'Accept-Language',
       'Accept-Encoding',
       'Origin',
-      'X-Requested-With',    ],
+      'X-Requested-With',
+    ],
     credentials: true,
   });
 
