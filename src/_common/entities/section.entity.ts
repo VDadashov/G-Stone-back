@@ -23,11 +23,11 @@ export class Section extends BaseEntity {
   @Column({ length: 50 })
   name: string;
 
-  @Column({ type: 'jsonb' })
-  title: MultiLanguageText;
+  @Column({ type: 'jsonb', nullable: true })
+  title?: MultiLanguageText | null;
 
-  @Column({ type: 'jsonb' })
-  description: MultiLanguageText;
+  @Column({ type: 'jsonb', nullable: true })
+  description?: MultiLanguageText | null;
 
   @Column({ type: 'jsonb', nullable: true })
   media?: MediaFile | null;

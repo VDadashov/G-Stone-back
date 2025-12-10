@@ -10,6 +10,9 @@ export class GalleryCategory extends BaseEntity {
   @Column({ unique: true })
   slug: string;
 
+  @Column({ nullable: true })
+  mainImage: string;
+
   @OneToMany(() => GalleryItem, (item) => item.galleryCategory)
   items: GalleryItem[];
 

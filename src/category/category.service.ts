@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Category } from '../_common/entities/category.entity';
@@ -29,21 +29,13 @@ export class CategoryService {
   async create(dto: CreateCategoryDto) {
     const category = this.categoryRepo.create(dto);
     category.slug = dto.title && dto.title.az ? slugify(dto.title.az) : '';
-    if (dto.parentId) {
-      const parentCategory = await this.categoryRepo.findOneBy({
-        id: dto.parentId,
-      });
-      if (!parentCategory)
-        throw new BadRequestException('Parent category tapılmadı');
-      category.parent = parentCategory;
-    }
     return this.categoryRepo.save(category);
   }
 
-  async findAll(lang?: string) {
+  async getAll(lang?: string) {
     lang = lang || 'az';
     const categories = await this.categoryRepo.find({
-      relations: ['parent', 'children', 'companies'],
+      relations: ['companies'],
     });
 
     return categories.map((c) => ({
@@ -57,17 +49,46 @@ export class CategoryService {
           // Digər company field-ləri də lazım olduqca əlavə edə bilərsiniz
         })) || [],
       title: this.i18n.translateField(c.title, lang),
-      parent: c.parent
-        ? {
-            id: c.parent.id,
-            title: this.i18n.translateField(c.parent.title, lang),
-          }
-        : null,
-      children:
-        c.children?.map((child) => ({
-          id: child.id,
-          title: this.i18n.translateField(child.title, lang),
+    }));
+  }
+
+  async findAll(lang?: string, isActive?: boolean, search?: string) {
+    lang = lang || 'az';
+    const queryBuilder = this.categoryRepo.createQueryBuilder('category')
+      .leftJoinAndSelect('category.companies', 'companies');
+
+    const conditions: string[] = [];
+    const params: any = {};
+
+    if (isActive !== undefined) {
+      conditions.push('category.isActive = :isActive');
+      params.isActive = isActive;
+    }
+
+    if (search) {
+      conditions.push(
+        '(category.title::text ILIKE :search OR category.title->>\'az\' ILIKE :search OR category.title->>\'en\' ILIKE :search OR category.title->>\'ru\' ILIKE :search)'
+      );
+      params.search = `%${search}%`;
+    }
+
+    if (conditions.length > 0) {
+      queryBuilder.where(conditions.join(' AND '), params);
+    }
+
+    const categories = await queryBuilder.getMany();
+
+    return categories.map((c) => ({
+      ...c,
+      companies:
+        c.companies?.map((company) => ({
+          id: company.id,
+          name: this.i18n.translateField(company.title, lang),
+          logo: this.getFullImageUrl(company.logo),
+          slug: company.slug,
+          // Digər company field-ləri də lazım olduqca əlavə edə bilərsiniz
         })) || [],
+      title: this.i18n.translateField(c.title, lang),
     }));
   }
 
@@ -75,7 +96,7 @@ export class CategoryService {
     lang = lang || 'az';
     const category = await this.categoryRepo.findOne({
       where: { id },
-      relations: ['parent', 'children', 'companies'],
+      relations: ['companies'],
     });
 
     if (!category) throw new NotFoundException('Category not found');
@@ -91,17 +112,6 @@ export class CategoryService {
           // Digər company field-ləri də lazım olduqca əlavə edə bilərsiniz
         })) || [],
       title: this.i18n.translateField(category.title, lang),
-      parent: category.parent
-        ? {
-            id: category.parent.id,
-            title: this.i18n.translateField(category.parent.title, lang),
-          }
-        : null,
-      children:
-        category.children?.map((child) => ({
-          id: child.id,
-          title: this.i18n.translateField(child.title, lang),
-        })) || [],
     };
   }
 
@@ -113,14 +123,6 @@ export class CategoryService {
     // Əgər title.az dəyişibsə slug yenilənsin
     if (dto.title && dto.title.az && dto.title.az !== oldTitleAz) {
       category.slug = slugify(dto.title.az);
-    }
-    if (dto.parentId) {
-      const parentCategory = await this.categoryRepo.findOneBy({
-        id: dto.parentId,
-      });
-      if (!parentCategory)
-        throw new BadRequestException('Parent category tapılmadı');
-      category.parent = parentCategory;
     }
     return this.categoryRepo.save(category);
   }
@@ -134,7 +136,7 @@ export class CategoryService {
 
   async findAllForAdmin() {
     const categories = await this.categoryRepo.find({
-      relations: ['parent', 'children', 'companies'],
+      relations: ['companies'],
     });
     return categories.map((c) => ({
       ...c,
@@ -144,17 +146,13 @@ export class CategoryService {
           title: company.title,
         })) || [],
       title: c.title,
-      parent: c.parent ? { id: c.parent.id, title: c.parent.title } : null,
-      children:
-        c.children?.map((child) => ({ id: child.id, title: child.title })) ||
-        [],
     }));
   }
 
   async findOneForAdmin(id: number) {
     const category = await this.categoryRepo.findOne({
       where: { id },
-      relations: ['parent', 'children', 'companies'],
+      relations: ['companies'],
     });
     if (!category) throw new NotFoundException('Category not found');
     return {
@@ -165,14 +163,6 @@ export class CategoryService {
           title: company.title,
         })) || [],
       title: category.title,
-      parent: category.parent
-        ? { id: category.parent.id, title: category.parent.title }
-        : null,
-      children:
-        category.children?.map((child) => ({
-          id: child.id,
-          title: child.title,
-        })) || [],
     };
   }
 } 

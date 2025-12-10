@@ -10,11 +10,8 @@ export class GalleryItem extends BaseEntity {
   @Column({ type: 'jsonb', nullable: true })
   description: { az: string; en?: string; ru?: string };
 
-  @Column({ nullable: true })
-  mainImage: string;
-
-  @Column({ type: 'text', array: true, nullable: true })
-  imageList: string[];
+  @Column({ type: 'jsonb', nullable: true })
+  imageList: Array<{ url: string; isMain: boolean }>;
 
   @ManyToOne(() => GalleryCategory, (category) => category.items, { nullable: false })
   galleryCategory: GalleryCategory;

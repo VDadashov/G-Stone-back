@@ -79,12 +79,13 @@ export class CreateCompanyDto {
 
   @ApiProperty({
     type: 'string',
-    format: 'binary',
     required: false,
-    description: 'Logo faylı (file)',
+    description: 'Logo URL',
+    example: 'https://example.com/logo.png',
   })
   @IsOptional()
-  logo?: any;
+  @IsString()
+  logo?: string;
 
   @ApiProperty({
     example: {

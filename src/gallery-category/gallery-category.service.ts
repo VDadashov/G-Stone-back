@@ -21,9 +21,41 @@ export class GalleryCategoryService {
     return this.galleryCategoryRepo.save(galleryCategory);
   }
 
-  async findAll(lang?: string) {
+  async findAll(
+    lang?: string,
+    isActive?: boolean,
+    sort?: string,
+  ) {
     lang = lang || 'az';
-    const categories = await this.galleryCategoryRepo.find();
+
+    const queryBuilder = this.galleryCategoryRepo.createQueryBuilder('galleryCategory');
+
+    // Active status filter (optional)
+    if (isActive !== undefined) {
+      queryBuilder.andWhere('galleryCategory.isActive = :isActive', { isActive });
+    }
+
+    // Sort
+    switch (sort) {
+      case 'az':
+        // A-Z sıralaması üçün sadə yanaşma
+        queryBuilder.orderBy('galleryCategory.id', 'ASC');
+        break;
+      case 'za':
+        // Z-A sıralaması üçün sadə yanaşma
+        queryBuilder.orderBy('galleryCategory.id', 'DESC');
+        break;
+      case 'newest':
+        queryBuilder.orderBy('galleryCategory.createdAt', 'DESC');
+        break;
+      case 'oldest':
+        queryBuilder.orderBy('galleryCategory.createdAt', 'ASC');
+        break;
+      default:
+        queryBuilder.orderBy('galleryCategory.id', 'DESC');
+    }
+
+    const categories = await queryBuilder.getMany();
     return categories.map((c) => ({
       ...c,
       title: this.i18n.translateField(c.title, lang),
@@ -58,6 +90,41 @@ export class GalleryCategoryService {
     return {
       ...category,
       title: category.title,
+    };
+  }
+
+  async findBySlug(slug: string, lang?: string) {
+    lang = lang || 'az';
+    const category = await this.galleryCategoryRepo.findOne({
+      where: { slug },
+      relations: ['items'],
+    });
+    if (!category) {
+      throw new NotFoundException('Gallery Category not found');
+    }
+    return {
+      ...category,
+      title: this.i18n.translateField(category.title, lang),
+      items: category.items?.map((item) => ({
+        ...item,
+        title: this.i18n.translateField(item.title, lang),
+        description: this.i18n.translateField(item.description, lang),
+      })) || [],
+    };
+  }
+
+  async findBySlugForAdmin(slug: string) {
+    const category = await this.galleryCategoryRepo.findOne({
+      where: { slug },
+      relations: ['items'],
+    });
+    if (!category) {
+      throw new NotFoundException('Gallery Category not found');
+    }
+    return {
+      ...category,
+      title: category.title,
+      items: category.items || [],
     };
   }
 

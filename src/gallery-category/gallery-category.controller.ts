@@ -27,15 +27,40 @@ export class GalleryCategoryController {
   @Get()
   @ApiOperation({ summary: 'Get all gallery categories' })
   @ApiQuery({ name: 'allLanguages', required: false, type: Boolean, description: 'Admin üçün bütün dillər' })
+  @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    enum: ['az', 'za', 'newest', 'oldest'],
+    description: 'Sıralama növü',
+  })
   @ApiResponse({ status: 200, description: 'List of gallery categories' })
   findAll(
     @Query('allLanguages') allLanguages?: boolean,
+    @Query('isActive') isActive?: string,
+    @Query('sort') sort?: string,
     @Headers('accept-language') acceptLanguage?: string
   ) {
     if (allLanguages) {
       return this.galleryCategoryService.findAllForAdmin();
     }
-    return this.galleryCategoryService.findAll(acceptLanguage);
+    const isActiveBool = isActive !== undefined ? isActive === 'true' : undefined;
+    return this.galleryCategoryService.findAll(acceptLanguage, isActiveBool, sort);
+  }
+
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Get gallery category by slug with items' })
+  @ApiQuery({ name: 'allLanguages', required: false, type: Boolean, description: 'Admin üçün bütün dillər' })
+  @ApiResponse({ status: 200, description: 'Gallery category detail with items' })
+  findBySlug(
+    @Param('slug') slug: string,
+    @Query('allLanguages') allLanguages?: boolean,
+    @Headers('accept-language') acceptLanguage?: string
+  ) {
+    if (allLanguages) {
+      return this.galleryCategoryService.findBySlugForAdmin(slug);
+    }
+    return this.galleryCategoryService.findBySlug(slug, acceptLanguage);
   }
 
   @Get(':id')

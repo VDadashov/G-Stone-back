@@ -1,6 +1,16 @@
-import { IsNotEmpty, IsObject, IsOptional, IsNumber } from 'class-validator';
-import { Transform } from 'class-transformer';
-import { ApiProperty } from '@nestjs/swagger';
+import { IsNotEmpty, IsObject, IsOptional, IsNumber, IsString, IsArray, ValidateNested } from 'class-validator';
+import { Transform, Type } from 'class-transformer';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+class ImageItemDto {
+  @ApiProperty({ example: 'https://example.com/image.jpg' })
+  @IsString()
+  url: string;
+
+  @ApiProperty({ example: true })
+  @IsOptional()
+  isMain?: boolean;
+}
 
 export class CreateGalleryItemDto {
   @ApiProperty({ example: { az: 'Qalereya Elementi', en: 'Gallery Item', ru: 'Элемент Галереи' } })
@@ -21,7 +31,7 @@ export class CreateGalleryItemDto {
   @IsNotEmpty()
   title: { az: string; en?: string; ru?: string };
 
-  @ApiProperty({ example: { az: 'Açıqlama', en: 'Description', ru: 'Описание' }, required: false })
+  @ApiPropertyOptional({ example: { az: 'Açıqlama', en: 'Description', ru: 'Описание' } })
   @Transform(({ value }) => {
     if (typeof value === 'string') {
       try {
@@ -39,13 +49,19 @@ export class CreateGalleryItemDto {
   @IsObject()
   description?: { az: string; en?: string; ru?: string };
 
-  @ApiProperty({ type: 'string', format: 'binary', required: false, description: 'Gallery item image' })
+  @ApiPropertyOptional({ 
+    type: [ImageItemDto],
+    example: [
+      { url: 'https://example.com/image1.jpg', isMain: true },
+      { url: 'https://example.com/image2.jpg', isMain: false }
+    ],
+    description: 'Array of image objects with url and isMain properties'
+  })
   @IsOptional()
-  mainImage?: string;
-
-  @ApiProperty({ type: 'string', format: 'binary', isArray: true, required: false, description: 'Gallery item images' })
-  @IsOptional()
-  imageList?: string[];
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ImageItemDto)
+  imageList?: Array<{ url: string; isMain?: boolean }>;
 
   @ApiProperty({ required: true, description: 'Gallery Category ID' })
   @Transform(({ value }) => {

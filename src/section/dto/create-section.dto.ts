@@ -64,17 +64,17 @@ export class CreateSectionDto {
     | 'blog'
     | 'custom';
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
   @ValidateNested()
   @Type(() => MultiLanguageText)
-  title: MultiLanguageText;
+  title?: MultiLanguageText | null;
 
-  @ApiProperty()
-  @IsNotEmpty()
+  @ApiPropertyOptional({ nullable: true })
+  @IsOptional()
   @ValidateNested()
   @Type(() => MultiLanguageText)
-  description: MultiLanguageText;
+  description?: MultiLanguageText | null;
 
   @ApiProperty()
   @IsNumber()

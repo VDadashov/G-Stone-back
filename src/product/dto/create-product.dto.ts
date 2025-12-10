@@ -33,17 +33,33 @@ export class CreateProductDto {
   @IsObject()
   description?: { az: string; en?: string; ru?: string };
 
-  @ApiProperty({ type: 'string', format: 'binary', required: false, description: 'Product image' })
+  @ApiProperty({ 
+    type: 'string', 
+    required: false, 
+    description: 'Main product image URL',
+    example: 'https://example.com/image.png'
+  })
   @IsOptional()
   @IsString()
   mainImage?: string;
 
-  @ApiProperty({ type: 'string', format: 'binary', isArray: true, required: false, description: 'Product images' })
+  @ApiProperty({ 
+    type: [String], 
+    required: false, 
+    description: 'Product image URLs array',
+    example: ['https://example.com/image1.png', 'https://example.com/image2.png']
+  })
   @IsOptional()
   @IsArray()
+  @IsString({ each: true })
   imageList?: string[];
 
-  @ApiProperty({ type: 'string', format: 'binary', required: false, description: 'Product PDF' })
+  @ApiProperty({ 
+    type: 'string', 
+    required: false, 
+    description: 'Product PDF URL',
+    example: 'https://example.com/product.pdf'
+  })
   @IsOptional()
   @IsString()
   detailPdf?: string;

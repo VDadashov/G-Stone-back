@@ -1,15 +1,15 @@
 import { PartialType, ApiProperty } from '@nestjs/swagger';
 import { CreateCompanyDto } from './create-company.dto';
-import { IsOptional } from 'class-validator';
+import { IsOptional, IsString } from 'class-validator';
 
 export class UpdateCompanyDto extends PartialType(CreateCompanyDto) {
   @ApiProperty({ 
     type: 'string', 
-    format: 'binary', 
     required: false, 
-    description: 'Logo faylı (file) - yeni logo yüklemek için' 
+    description: 'Logo URL',
+    example: 'https://example.com/logo.png'
   })
   @IsOptional()
-  logo?: any;
-
+  @IsString()
+  logo?: string;
 } 

@@ -25,18 +25,30 @@ export class CategoryController {
     return this.categoryService.create(dto);
   }
 
+  @Get('all')
+  @ApiOperation({ summary: 'Get all categories without filters' })
+  @ApiResponse({ status: 200, description: 'List of all categories' })
+  getAll(@Headers('accept-language') acceptLanguage?: string) {
+    return this.categoryService.getAll(acceptLanguage);
+  }
+
   @Get()
-  @ApiOperation({ summary: 'Get all categories' })
+  @ApiOperation({ summary: 'Get all categories with filters' })
   @ApiQuery({ name: 'allLanguages', required: false, type: Boolean, description: 'Admin üçün bütün dillər' })
+  @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
+  @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by category name/title' })
   @ApiResponse({ status: 200, description: 'List of categories' })
   findAll(
-    @Query('allLanguages') allLanguages?: boolean,
+    @Query('allLanguages') allLanguages?: string,
+    @Query('isActive') isActive?: string,
+    @Query('search') search?: string,
     @Headers('accept-language') acceptLanguage?: string
   ) {
-    if (allLanguages) {
+    if (allLanguages === 'true') {
       return this.categoryService.findAllForAdmin();
     }
-    return this.categoryService.findAll(acceptLanguage);
+    const isActiveBool = isActive !== undefined ? isActive === 'true' : undefined;
+    return this.categoryService.findAll(acceptLanguage, isActiveBool, search);
   }
 
   @Get(':id')

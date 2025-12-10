@@ -6,8 +6,6 @@ import {
   Param,
   Put,
   Delete,
-  UploadedFiles,
-  UseInterceptors,
   BadRequestException,
   Query,
   Headers,
@@ -17,83 +15,24 @@ import {
   ApiOperation,
   ApiResponse,
   ApiBody,
-  ApiConsumes,
   ApiQuery,
 } from '@nestjs/swagger';
 import { ProductService } from './product.service';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { AnyFilesInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { extname } from 'path';
-
-function fileNameEdit(req, file, cb) {
-  const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-  cb(null, uniqueSuffix + extname(file.originalname));
-}
 
 @ApiTags('Product')
 @Controller('products')
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
-
-  // Helper method for formatting file paths
-  private formatFilePath(filePath: string): string {
-    return filePath
-      .replace(/\\/g, '/')
-      .replace('public/', '') // public/ prefiksini sil
-      .replace(/^\/+/, ''); // Başındakı slash-ları sil
-  }
+  constructor(
+    private readonly productService: ProductService,
+  ) {}
 
   @Post()
   @ApiOperation({ summary: 'Create product' })
-  @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateProductDto })
   @ApiResponse({ status: 201, description: 'Product created' })
-  @UseInterceptors(
-    AnyFilesInterceptor({
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          if (file.mimetype.startsWith('image/')) {
-            cb(null, './public/uploads/images');
-          } else if (file.mimetype === 'application/pdf') {
-            cb(null, './public/uploads/pdfs');
-          } else {
-            cb(new Error('Unsupported file type'), '');
-          }
-        },
-        filename: fileNameEdit,
-      }),
-      fileFilter: (req, file, cb) => {
-        if (
-          file.mimetype.startsWith('image/') ||
-          file.mimetype === 'application/pdf'
-        ) {
-          cb(null, true);
-        } else {
-          cb(null, false);
-        }
-      },
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-    }),
-  )
-  async create(
-    @UploadedFiles() files: Array<Express.Multer.File>,
-    @Body() dto: CreateProductDto,
-  ) {
-    if (typeof dto.title === 'string') {
-      dto.title = JSON.parse(dto.title);
-    }
-    if (typeof dto.description === 'string') {
-      dto.description = JSON.parse(dto.description);
-    }
-    if (dto.categoryId) {
-      dto.categoryId = Number(dto.categoryId);
-    }
-    if (dto.companyId) {
-      dto.companyId = Number(dto.companyId);
-    }
-
+  async create(@Body() dto: CreateProductDto) {
     // Məcburi field-ləri yoxla
     if (!dto.categoryId) {
       throw new BadRequestException('categoryId məcburidir');
@@ -102,25 +41,14 @@ export class ProductController {
       throw new BadRequestException('companyId məcburidir');
     }
 
-    if (files && files.length) {
-      dto.imageList = [];
-      for (const file of files) {
-        if (file.mimetype.startsWith('image/')) {
-          const imagePath = `/${this.formatFilePath(file.path)}`;
-
-          if (!dto.mainImage) {
-            dto.mainImage = imagePath;
-          }
-          dto.imageList.push(imagePath);
-        } else if (file.mimetype === 'application/pdf') {
-          dto.detailPdf = `/${this.formatFilePath(file.path)}`;
-        }
-      }
-    }
-
     // imageList her zaman dizi olsun
     if (!dto.imageList || typeof dto.imageList === 'string') {
       dto.imageList = [];
+    }
+
+    // Əgər imageList var amma mainImage yoxdursa, ilk image-i mainImage kimi istifadə et
+    if (dto.imageList && dto.imageList.length > 0 && !dto.mainImage) {
+      dto.mainImage = dto.imageList[0];
     }
 
     return this.productService.create(dto);
@@ -128,22 +56,77 @@ export class ProductController {
 
   // Controller method
   @Get()
-  @ApiOperation({ summary: 'Get all products' })
-  @ApiResponse({ status: 200, description: 'List of products' })
+  @ApiOperation({ summary: 'Get all products with pagination' })
+  @ApiResponse({ status: 200, description: 'Paginated list of products' })
   @ApiQuery({
     name: 'allLanguages',
     required: false,
     type: Boolean,
     description: 'Return all languages or filtered by accept-language header',
   })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: Number,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'pageSize',
+    required: false,
+    type: Number,
+    description: 'Items per page (default: 10)',
+  })
+  @ApiQuery({
+    name: 'companyId',
+    required: false,
+    type: Number,
+    description: 'Filter by company ID',
+  })
+  @ApiQuery({
+    name: 'categoryId',
+    required: false,
+    type: Number,
+    description: 'Filter by category ID',
+  })
+  @ApiQuery({
+    name: 'isActive',
+    required: false,
+    type: Boolean,
+    description: 'Filter by active status',
+  })
+  @ApiQuery({
+    name: 'sort',
+    required: false,
+    enum: ['az', 'za', 'newest', 'oldest'],
+    description: 'Sıralama növü',
+  })
   findAll(
     @Query('allLanguages') allLanguages?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string,
+    @Query('companyId') companyId?: string,
+    @Query('categoryId') categoryId?: string,
+    @Query('isActive') isActive?: string,
+    @Query('sort') sort?: string,
     @Headers('accept-language') acceptLanguage?: string,
   ) {
     if (allLanguages === 'true') {
       return this.productService.findAllForAdmin();
     }
-    return this.productService.findAll(acceptLanguage);
+    const pageNum = page ? parseInt(page, 10) : undefined;
+    const pageSizeNum = pageSize ? parseInt(pageSize, 10) : undefined;
+    const companyIdNum = companyId ? parseInt(companyId, 10) : undefined;
+    const categoryIdNum = categoryId ? parseInt(categoryId, 10) : undefined;
+    const isActiveBool = isActive !== undefined ? isActive === 'true' : undefined;
+    return this.productService.findAll(
+      acceptLanguage,
+      pageNum,
+      pageSizeNum,
+      companyIdNum,
+      categoryIdNum,
+      isActiveBool,
+      sort,
+    );
   }
 
   @Get('search')
@@ -156,29 +139,51 @@ export class ProductController {
     description: 'Search by product title',
   })
   @ApiQuery({
-    name: 'company',
+    name: 'companyId',
     required: false,
-    type: String,
-    description: 'Filter by company slug',
+    type: Number,
+    description: 'Filter by company ID',
   })
   @ApiQuery({
-    name: 'category',
+    name: 'categoryId',
     required: false,
-    type: String,
-    description: 'Filter by category slug',
+    type: Number,
+    description: 'Filter by category ID',
   })
   search(
     @Query('title') title?: string,
-    @Query('company') companySlug?: string,
-    @Query('category') categorySlug?: string,
+    @Query('companyId') companyId?: string,
+    @Query('categoryId') categoryId?: string,
     @Headers('accept-language') acceptLanguage?: string,
   ) {
+    const companyIdNum = companyId ? parseInt(companyId, 10) : undefined;
+    const categoryIdNum = categoryId ? parseInt(categoryId, 10) : undefined;
     return this.productService.searchProducts(
       title,
-      companySlug,
-      categorySlug,
+      companyIdNum,
+      categoryIdNum,
       acceptLanguage,
     );
+  }
+
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Get product by slug' })
+  @ApiResponse({ status: 200, description: 'Product detail' })
+  @ApiQuery({
+    name: 'allLanguages',
+    required: false,
+    type: Boolean,
+    description: 'Return all languages or filtered by accept-language header',
+  })
+  findBySlug(
+    @Param('slug') slug: string,
+    @Query('allLanguages') allLanguages?: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ) {
+    if (allLanguages === 'true') {
+      return this.productService.findBySlugForAdmin(slug);
+    }
+    return this.productService.findBySlug(slug, acceptLanguage);
   }
 
   @Get(':id')
@@ -203,73 +208,20 @@ export class ProductController {
 
   @Put(':id')
   @ApiOperation({ summary: 'Update product' })
-  @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UpdateProductDto })
   @ApiResponse({ status: 200, description: 'Product updated' })
-  @UseInterceptors(
-    AnyFilesInterceptor({
-      storage: diskStorage({
-        destination: (req, file, cb) => {
-          if (file.mimetype.startsWith('image/')) {
-            cb(null, './public/uploads/images');
-          } else if (file.mimetype === 'application/pdf') {
-            cb(null, './public/uploads/pdfs');
-          } else {
-            cb(new Error('Unsupported file type'), '');
-          }
-        },
-        filename: fileNameEdit,
-      }),
-      fileFilter: (req, file, cb) => {
-        if (
-          file.mimetype.startsWith('image/') ||
-          file.mimetype === 'application/pdf'
-        ) {
-          cb(null, true);
-        } else {
-          cb(null, false);
-        }
-      },
-      limits: { fileSize: 10 * 1024 * 1024 }, // 10MB
-    }),
-  )
   async update(
     @Param('id') id: number,
-    @UploadedFiles() files: Array<Express.Multer.File>,
     @Body() dto: UpdateProductDto,
   ) {
-    if (typeof dto.title === 'string') {
-      dto.title = JSON.parse(dto.title);
-    }
-    if (typeof dto.description === 'string') {
-      dto.description = JSON.parse(dto.description);
-    }
-    if (dto.categoryId) {
-      dto.categoryId = Number(dto.categoryId);
-    }
-    if (dto.companyId) {
-      dto.companyId = Number(dto.companyId);
-    }
-
-    if (files && files.length) {
-      dto.imageList = [];
-      for (const file of files) {
-        if (file.mimetype.startsWith('image/')) {
-          const imagePath = `/${this.formatFilePath(file.path)}`;
-
-          if (!dto.mainImage) {
-            dto.mainImage = imagePath;
-          }
-          dto.imageList.push(imagePath);
-        } else if (file.mimetype === 'application/pdf') {
-          dto.detailPdf = `/${this.formatFilePath(file.path)}`;
-        }
-      }
-    }
-
     // imageList her zaman dizi olsun
     if (!dto.imageList || typeof dto.imageList === 'string') {
       dto.imageList = [];
+    }
+
+    // Əgər imageList var amma mainImage yoxdursa, ilk image-i mainImage kimi istifadə et
+    if (dto.imageList && dto.imageList.length > 0 && !dto.mainImage) {
+      dto.mainImage = dto.imageList[0];
     }
 
     return this.productService.update(id, dto);

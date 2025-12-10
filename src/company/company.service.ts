@@ -22,16 +22,20 @@ export class CompanyService {
 
   private getFullImageUrl(logoPath: string): string | null {
     if (!logoPath) return null;
+    // If logoPath is already a full URL (Cloudinary URL), return it as is
+    if (logoPath.startsWith('http://') || logoPath.startsWith('https://')) {
+      return logoPath;
+    }
     const baseUrl = this.configService.get<string>('BASE_URL');
     return `${baseUrl}${logoPath}`;
   }
 
-  async create(dto: CreateCompanyDto, logo?: any) {
+  async create(dto: CreateCompanyDto, logoUrl?: string) {
     const company = this.companyRepo.create(dto);
     company.slug = dto.title && dto.title.az ? slugify(dto.title.az) : '';
 
-    if (logo) {
-      company.logo = `/uploads/images/${logo.filename}`;
+    if (logoUrl) {
+      company.logo = logoUrl;
     }
 
     if (dto.categoryIds && dto.categoryIds.length > 0) {
@@ -99,7 +103,7 @@ export class CompanyService {
     };
   }
 
-  async update(id: number, dto: UpdateCompanyDto, logo?: any) {
+  async update(id: number, dto: UpdateCompanyDto, logoUrl?: string) {
     const company = await this.companyRepo.findOneBy({ id });
     if (!company) throw new NotFoundException('Company not found');
     const oldTitleAz = company.title?.az;
@@ -107,8 +111,8 @@ export class CompanyService {
     if (dto.title && dto.title.az && dto.title.az !== oldTitleAz) {
       company.slug = slugify(dto.title.az);
     }
-    if (logo) {
-      company.logo = `/uploads/images/${logo.filename}`;
+    if (logoUrl) {
+      company.logo = logoUrl;
     }
     if (dto.categoryIds && dto.categoryIds.length > 0) {
       const categories = await this.categoryRepo.findByIds(dto.categoryIds);

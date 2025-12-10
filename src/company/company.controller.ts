@@ -8,9 +8,6 @@ import {
   Delete,
   Query,
   UseGuards,
-  UploadedFile,
-  UseInterceptors,
-  UseFilters,
   Headers,
 } from '@nestjs/common';
 import {
@@ -18,52 +15,32 @@ import {
   ApiResponse,
   ApiOperation,
   ApiBearerAuth,
-  ApiConsumes,
   ApiBody,
   ApiQuery,
 } from '@nestjs/swagger';
 import { CompanyService } from './company.service';
 import { CreateCompanyDto } from './dto/create-company.dto';
 import { UpdateCompanyDto } from './dto/update-company.dto';
-import { Lang } from '../i18n/i18n.decorator';
 import { JwtAuthGuard } from '../_common/guards/jwt-auth.guard';
 import { Roles } from '../_common/decorators/roles.decorator';
 import { RolesGuard } from '../_common/guards/roles.guard';
-import { FileInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import { MulterExceptionFilter } from '../_common/filters/multer-exception.filter';
-import {
-  imageFileFilter,
-  imageMaxSize,
-} from '../_common/utils/file-validation.util';
-import { fileNameEdit } from '../_common/utils/file-name-edit.util';
 
 @ApiTags('Company')
 @Controller('company')
 export class CompanyController {
-  constructor(private readonly companyService: CompanyService) {}
+  constructor(
+    private readonly companyService: CompanyService,
+  ) {}
 
   @Post()
   @ApiBearerAuth()
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Create company' })
-  @ApiConsumes('multipart/form-data')
   @ApiBody({ type: CreateCompanyDto })
   @ApiResponse({ status: 201, description: 'Company created' })
-  @UseInterceptors(
-    FileInterceptor('logo', {
-      storage: diskStorage({
-        destination: './public/uploads/images',
-        filename: fileNameEdit,
-      }),
-      fileFilter: imageFileFilter,
-      limits: { fileSize: imageMaxSize },
-    }),
-  )
-  @UseFilters(MulterExceptionFilter)
-  create(@Body() dto: CreateCompanyDto, @UploadedFile() logo?: any) {
-    return this.companyService.create(dto, logo);
+  async create(@Body() dto: CreateCompanyDto) {
+    return this.companyService.create(dto, dto.logo);
   }
 
   @Get()
@@ -110,28 +87,13 @@ export class CompanyController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('admin')
   @ApiOperation({ summary: 'Update company' })
-  @ApiConsumes('multipart/form-data')
   @ApiBody({ type: UpdateCompanyDto })
   @ApiResponse({ status: 200, description: 'Company updated' })
-  @UseInterceptors(
-    FileInterceptor('logo', {
-      storage: diskStorage({
-        destination: './public/uploads/images',
-        filename: fileNameEdit,
-      }),
-      fileFilter: imageFileFilter,
-      limits: { fileSize: imageMaxSize },
-    }),
-  )
-  @UseFilters(MulterExceptionFilter)
-  update(
+  async update(
     @Param('id') id: number,
     @Body() dto: UpdateCompanyDto,
-    @UploadedFile() logo?: any,
   ) {
-    // @Transform dekoratorları avtomatik işləyəcək
-    // Manual parse artıq lazım deyil
-    return this.companyService.update(id, dto, logo);
+    return this.companyService.update(id, dto, dto.logo);
   }
 
   @Delete(':id')

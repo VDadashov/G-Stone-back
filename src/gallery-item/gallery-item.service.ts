@@ -17,7 +17,7 @@ export class GalleryItemService {
     private readonly i18n: I18nService,
   ) {}
 
-  async create(dto: CreateGalleryItemDto, files: Array<Express.Multer.File>) {
+  async create(dto: CreateGalleryItemDto) {
     const galleryCategory = await this.galleryCategoryRepo.findOneBy({ id: dto.galleryCategoryId });
     if (!galleryCategory) {
       throw new NotFoundException('Gallery Category not found');
@@ -26,16 +26,14 @@ export class GalleryItemService {
     const galleryItem = this.galleryItemRepo.create(dto);
     galleryItem.galleryCategory = galleryCategory;
 
-    if (files && files.length > 0) {
+    // Ensure imageList is always an array
+    if (!dto.imageList || !Array.isArray(dto.imageList)) {
       galleryItem.imageList = [];
-      for (const file of files) {
-        if (!galleryItem.mainImage) {
-          galleryItem.mainImage = file.path.replace('public', '');
-        }
-        galleryItem.imageList.push(file.path.replace('public', ''));
-      }
-    } else if (dto.imageList === undefined || typeof dto.imageList === 'string') {
-      galleryItem.imageList = [];
+    } else {
+      galleryItem.imageList = dto.imageList.map(item => ({
+        url: item.url,
+        isMain: item.isMain || false,
+      }));
     }
     
     return this.galleryItemRepo.save(galleryItem);
@@ -66,7 +64,7 @@ export class GalleryItemService {
     };
   }
 
-  async update(id: number, dto: UpdateGalleryItemDto, files: Array<Express.Multer.File>) {
+  async update(id: number, dto: UpdateGalleryItemDto) {
     const item = await this.galleryItemRepo.findOneBy({ id });
     if (!item) {
       throw new NotFoundException('Gallery Item not found');
@@ -82,16 +80,16 @@ export class GalleryItemService {
 
     Object.assign(item, dto);
 
-    if (files && files.length > 0) {
-      item.imageList = [];
-      for (const file of files) {
-        if (!item.mainImage) {
-          item.mainImage = file.path.replace('public', '');
-        }
-        item.imageList.push(file.path.replace('public', ''));
-      }
-    } else if (dto.imageList === undefined || typeof dto.imageList === 'string') {
+    // Handle imageList update
+    if (dto.imageList !== undefined) {
+      if (!Array.isArray(dto.imageList)) {
         item.imageList = [];
+      } else {
+        item.imageList = dto.imageList.map(imgItem => ({
+          url: imgItem.url,
+          isMain: imgItem.isMain || false,
+        }));
+      }
     }
 
     return this.galleryItemRepo.save(item);

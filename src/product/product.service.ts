@@ -22,10 +22,32 @@ export class ProductService {
     private configService: ConfigService,
   ) {}
 
-  private getFullImageUrl(imagePath: string): string | null {
-    if (!imagePath) return null;
+  private getFullImageUrl(imagePath: string | null | undefined): string | null {
+    if (!imagePath || imagePath === '' || typeof imagePath !== 'string') {
+      return null;
+    }
+    
+    // Trim whitespace
+    const trimmedPath = imagePath.trim();
+    if (!trimmedPath) return null;
+    
+    // Əgər artıq tam URL-dirsə (http:// və ya https:// ilə başlayırsa), olduğu kimi qaytar
+    if (trimmedPath.startsWith('http://') || trimmedPath.startsWith('https://')) {
+      return trimmedPath;
+    }
+    
+    // Base URL-i əlavə et (yalnız relative path üçün)
     const baseUrl = this.configService.get<string>('BASE_URL');
-    return `${baseUrl}${imagePath}`;
+    if (!baseUrl) {
+      return trimmedPath;
+    }
+    
+    // Əgər path artıq baseUrl ilə başlayırsa, baseUrl-i əlavə etmə
+    if (trimmedPath.startsWith(baseUrl)) {
+      return trimmedPath;
+    }
+    
+    return `${baseUrl}${trimmedPath}`;
   }
 
   private transformProductImages(product: any) {
@@ -80,15 +102,74 @@ export class ProductService {
     return this.transformProductImages(savedProduct);
   }
 
-  async findAll(acceptLanguage?: string) {
+  async findAll(
+    acceptLanguage?: string,
+    page?: number,
+    pageSize?: number,
+    companyId?: number,
+    categoryId?: number,
+    isActive?: boolean,
+    sort?: string,
+  ) {
+    const currentPage = page || 1;
+    const limit = pageSize || 10;
+    const offset = (currentPage - 1) * limit;
+
     let lang = 'az';
     if (acceptLanguage) {
       lang = acceptLanguage.split(',')[0].split('-')[0];
     }
-    const products = await this.productRepo.find({
-      relations: ['company', 'category'],
-    });
-    return products.map((product) => {
+
+    const queryBuilder = this.productRepo
+      .createQueryBuilder('product')
+      .leftJoinAndSelect('product.company', 'company')
+      .leftJoinAndSelect('product.category', 'category');
+
+    // Company ID filter (optional)
+    if (companyId) {
+      queryBuilder.andWhere('company.id = :companyId', { companyId });
+    }
+
+    // Category ID filter (optional)
+    if (categoryId) {
+      queryBuilder.andWhere('category.id = :categoryId', { categoryId });
+    }
+
+    // Active status filter (optional)
+    if (isActive !== undefined) {
+      queryBuilder.andWhere('product.isActive = :isActive', { isActive });
+    }
+
+    // Sort
+    switch (sort) {
+      case 'az':
+        // A-Z sıralaması üçün sadə yanaşma
+        queryBuilder.orderBy('product.id', 'ASC');
+        break;
+      case 'za':
+        // Z-A sıralaması üçün sadə yanaşma
+        queryBuilder.orderBy('product.id', 'DESC');
+        break;
+      case 'newest':
+        queryBuilder.orderBy('product.createdAt', 'DESC');
+        break;
+      case 'oldest':
+        queryBuilder.orderBy('product.createdAt', 'ASC');
+        break;
+      default:
+        queryBuilder.orderBy('product.id', 'DESC');
+    }
+
+    // Get total count before pagination
+    const totalItems = await queryBuilder.getCount();
+
+    // Apply pagination and get products
+    const products = await queryBuilder
+      .skip(offset)
+      .take(limit)
+      .getMany();
+
+    const data = products.map((product) => {
       const transformedProduct = this.transformProductImages(product);
       return {
         ...transformedProduct,
@@ -108,6 +189,16 @@ export class ProductService {
           : null,
       };
     });
+
+    return {
+      data,
+      pagination: {
+        totalItems,
+        totalPages: Math.ceil(totalItems / limit),
+        currentPage,
+        pageSize: limit,
+      },
+    };
   }
 
   async findOne(id: number, acceptLanguage?: string) {
@@ -175,8 +266,8 @@ export class ProductService {
 
   async searchProducts(
     title?: string,
-    companySlug?: string,
-    categorySlug?: string,
+    companyId?: number,
+    categoryId?: number,
     acceptLanguage?: string,
   ) {
     let lang = 'az';
@@ -199,24 +290,22 @@ export class ProductService {
       hasConditions = true;
     }
 
-    // Company slug filter (optional)
-    if (companySlug && companySlug.trim()) {
+    // Company ID filter (optional)
+    if (companyId) {
       if (hasConditions) {
-        queryBuilder.andWhere('company.slug = :companySlug', { companySlug });
+        queryBuilder.andWhere('company.id = :companyId', { companyId });
       } else {
-        queryBuilder.where('company.slug = :companySlug', { companySlug });
+        queryBuilder.where('company.id = :companyId', { companyId });
         hasConditions = true;
       }
     }
 
-    // Category slug filter (optional)
-    if (categorySlug && categorySlug.trim()) {
+    // Category ID filter (optional)
+    if (categoryId) {
       if (hasConditions) {
-        queryBuilder.andWhere('category.slug = :categorySlug', {
-          categorySlug,
-        });
+        queryBuilder.andWhere('category.id = :categoryId', { categoryId });
       } else {
-        queryBuilder.where('category.slug = :categorySlug', { categorySlug });
+        queryBuilder.where('category.id = :categoryId', { categoryId });
         hasConditions = true;
       }
     }
@@ -270,6 +359,56 @@ export class ProductService {
   async findOneForAdmin(id: number) {
     const product = await this.productRepo.findOne({
       where: { id },
+      relations: ['company', 'category'],
+    });
+    if (!product) throw new NotFoundException('Product tapılmadı');
+
+    const transformedProduct = this.transformProductImages(product);
+    return {
+      ...transformedProduct,
+      title: product.title, // bütün dillər
+      description: product.description, // bütün dillər
+      company: product.company
+        ? { id: product.company.id, title: product.company.title }
+        : null,
+      category: product.category
+        ? { id: product.category.id, title: product.category.title }
+        : null,
+    };
+  }
+
+  async findBySlug(slug: string, acceptLanguage?: string) {
+    const product = await this.productRepo.findOne({
+      where: { slug },
+      relations: ['company', 'category'],
+    });
+    if (!product) throw new NotFoundException('Product tapılmadı');
+    
+    let lang = 'az';
+    if (acceptLanguage) {
+      lang = acceptLanguage.split(',')[0].split('-')[0];
+    }
+
+    const transformedProduct = this.transformProductImages(product);
+    return {
+      ...transformedProduct,
+      title: product.title?.[lang] ?? '',
+      description: product.description?.[lang] ?? '',
+      company: product.company
+        ? { id: product.company.id, title: product.company.title?.[lang] ?? '' }
+        : null,
+      category: product.category
+        ? {
+            id: product.category.id,
+            title: product.category.title?.[lang] ?? '',
+          }
+        : null,
+    };
+  }
+
+  async findBySlugForAdmin(slug: string) {
+    const product = await this.productRepo.findOne({
+      where: { slug },
       relations: ['company', 'category'],
     });
     if (!product) throw new NotFoundException('Product tapılmadı');
