@@ -37,22 +37,18 @@ export class CategoryController {
   @ApiQuery({ name: 'allLanguages', required: false, type: Boolean, description: 'Admin üçün bütün dillər' })
   @ApiQuery({ name: 'isActive', required: false, type: Boolean, description: 'Filter by active status' })
   @ApiQuery({ name: 'search', required: false, type: String, description: 'Search by category name/title' })
-  @ApiQuery({ name: 'categorySlug', required: false, type: String, description: 'Filter by category slug' })
-  @ApiQuery({ name: 'companySlug', required: false, type: String, description: 'Filter by company slug' })
   @ApiResponse({ status: 200, description: 'List of categories' })
   findAll(
     @Query('allLanguages') allLanguages?: string,
     @Query('isActive') isActive?: string,
     @Query('search') search?: string,
-    @Query('categorySlug') categorySlug?: string,
-    @Query('companySlug') companySlug?: string,
     @Headers('accept-language') acceptLanguage?: string
   ) {
     if (allLanguages === 'true') {
       return this.categoryService.findAllForAdmin();
     }
     const isActiveBool = isActive !== undefined ? isActive === 'true' : undefined;
-    return this.categoryService.findAll(acceptLanguage, isActiveBool, search, categorySlug, companySlug);
+    return this.categoryService.findAll(acceptLanguage, isActiveBool, search);
   }
 
   @Get(':id')

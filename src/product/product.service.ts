@@ -106,8 +106,8 @@ export class ProductService {
     acceptLanguage?: string,
     page?: number,
     pageSize?: number,
-    companyId?: number,
-    categoryId?: number,
+    companySlug?: string,
+    categorySlug?: string,
     isActive?: boolean,
     sort?: string,
   ) {
@@ -125,14 +125,14 @@ export class ProductService {
       .leftJoinAndSelect('product.company', 'company')
       .leftJoinAndSelect('product.category', 'category');
 
-    // Company ID filter (optional)
-    if (companyId) {
-      queryBuilder.andWhere('company.id = :companyId', { companyId });
+    // Company slug filter (optional)
+    if (companySlug) {
+      queryBuilder.andWhere('company.slug = :companySlug', { companySlug });
     }
 
-    // Category ID filter (optional)
-    if (categoryId) {
-      queryBuilder.andWhere('category.id = :categoryId', { categoryId });
+    // Category slug filter (optional)
+    if (categorySlug) {
+      queryBuilder.andWhere('category.slug = :categorySlug', { categorySlug });
     }
 
     // Active status filter (optional)
@@ -377,53 +377,4 @@ export class ProductService {
     };
   }
 
-  async findBySlug(slug: string, acceptLanguage?: string) {
-    const product = await this.productRepo.findOne({
-      where: { slug },
-      relations: ['company', 'category'],
-    });
-    if (!product) throw new NotFoundException('Product tapılmadı');
-    
-    let lang = 'az';
-    if (acceptLanguage) {
-      lang = acceptLanguage.split(',')[0].split('-')[0];
-    }
-
-    const transformedProduct = this.transformProductImages(product);
-    return {
-      ...transformedProduct,
-      title: product.title?.[lang] ?? '',
-      description: product.description?.[lang] ?? '',
-      company: product.company
-        ? { id: product.company.id, title: product.company.title?.[lang] ?? '' }
-        : null,
-      category: product.category
-        ? {
-            id: product.category.id,
-            title: product.category.title?.[lang] ?? '',
-          }
-        : null,
-    };
-  }
-
-  async findBySlugForAdmin(slug: string) {
-    const product = await this.productRepo.findOne({
-      where: { slug },
-      relations: ['company', 'category'],
-    });
-    if (!product) throw new NotFoundException('Product tapılmadı');
-
-    const transformedProduct = this.transformProductImages(product);
-    return {
-      ...transformedProduct,
-      title: product.title, // bütün dillər
-      description: product.description, // bütün dillər
-      company: product.company
-        ? { id: product.company.id, title: product.company.title }
-        : null,
-      category: product.category
-        ? { id: product.category.id, title: product.category.title }
-        : null,
-    };
-  }
 }

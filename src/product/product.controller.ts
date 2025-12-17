@@ -77,16 +77,16 @@ export class ProductController {
     description: 'Items per page (default: 10)',
   })
   @ApiQuery({
-    name: 'companyId',
+    name: 'companySlug',
     required: false,
-    type: Number,
-    description: 'Filter by company ID',
+    type: String,
+    description: 'Filter by company slug',
   })
   @ApiQuery({
-    name: 'categoryId',
+    name: 'categorySlug',
     required: false,
-    type: Number,
-    description: 'Filter by category ID',
+    type: String,
+    description: 'Filter by category slug',
   })
   @ApiQuery({
     name: 'isActive',
@@ -104,8 +104,8 @@ export class ProductController {
     @Query('allLanguages') allLanguages?: string,
     @Query('page') page?: string,
     @Query('pageSize') pageSize?: string,
-    @Query('companyId') companyId?: string,
-    @Query('categoryId') categoryId?: string,
+    @Query('companySlug') companySlug?: string,
+    @Query('categorySlug') categorySlug?: string,
     @Query('isActive') isActive?: string,
     @Query('sort') sort?: string,
     @Headers('accept-language') acceptLanguage?: string,
@@ -115,15 +115,13 @@ export class ProductController {
     }
     const pageNum = page ? parseInt(page, 10) : undefined;
     const pageSizeNum = pageSize ? parseInt(pageSize, 10) : undefined;
-    const companyIdNum = companyId ? parseInt(companyId, 10) : undefined;
-    const categoryIdNum = categoryId ? parseInt(categoryId, 10) : undefined;
     const isActiveBool = isActive !== undefined ? isActive === 'true' : undefined;
     return this.productService.findAll(
       acceptLanguage,
       pageNum,
       pageSizeNum,
-      companyIdNum,
-      categoryIdNum,
+      companySlug,
+      categorySlug,
       isActiveBool,
       sort,
     );
@@ -164,26 +162,6 @@ export class ProductController {
       categoryIdNum,
       acceptLanguage,
     );
-  }
-
-  @Get('slug/:slug')
-  @ApiOperation({ summary: 'Get product by slug' })
-  @ApiResponse({ status: 200, description: 'Product detail' })
-  @ApiQuery({
-    name: 'allLanguages',
-    required: false,
-    type: Boolean,
-    description: 'Return all languages or filtered by accept-language header',
-  })
-  findBySlug(
-    @Param('slug') slug: string,
-    @Query('allLanguages') allLanguages?: string,
-    @Headers('accept-language') acceptLanguage?: string,
-  ) {
-    if (allLanguages === 'true') {
-      return this.productService.findBySlugForAdmin(slug);
-    }
-    return this.productService.findBySlug(slug, acceptLanguage);
   }
 
   @Get(':id')
