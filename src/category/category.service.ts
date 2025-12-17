@@ -52,7 +52,7 @@ export class CategoryService {
     }));
   }
 
-  async findAll(lang?: string, isActive?: boolean, search?: string) {
+  async findAll(lang?: string, isActive?: boolean, search?: string, categorySlug?: string, companySlug?: string) {
     lang = lang || 'az';
     const queryBuilder = this.categoryRepo.createQueryBuilder('category')
       .leftJoinAndSelect('category.companies', 'companies');
@@ -70,6 +70,18 @@ export class CategoryService {
         '(category.title::text ILIKE :search OR category.title->>\'az\' ILIKE :search OR category.title->>\'en\' ILIKE :search OR category.title->>\'ru\' ILIKE :search)'
       );
       params.search = `%${search}%`;
+    }
+
+    // Category slug filter (optional)
+    if (categorySlug) {
+      conditions.push('category.slug = :categorySlug');
+      params.categorySlug = categorySlug;
+    }
+
+    // Company slug filter (optional)
+    if (companySlug) {
+      conditions.push('companies.slug = :companySlug');
+      params.companySlug = companySlug;
     }
 
     if (conditions.length > 0) {
