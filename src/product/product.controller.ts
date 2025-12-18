@@ -164,6 +164,26 @@ export class ProductController {
     );
   }
 
+  @Get('slug/:slug')
+  @ApiOperation({ summary: 'Get product by slug' })
+  @ApiResponse({ status: 200, description: 'Product detail' })
+  @ApiQuery({
+    name: 'allLanguages',
+    required: false,
+    type: Boolean,
+    description: 'Return all languages or filtered by accept-language header',
+  })
+  findBySlug(
+    @Param('slug') slug: string,
+    @Query('allLanguages') allLanguages?: string,
+    @Headers('accept-language') acceptLanguage?: string,
+  ) {
+    if (allLanguages === 'true') {
+      return this.productService.findBySlugForAdmin(slug);
+    }
+    return this.productService.findBySlug(slug, acceptLanguage);
+  }
+
   @Get(':id')
   @ApiOperation({ summary: 'Get product by id' })
   @ApiResponse({ status: 200, description: 'Product detail' })
