@@ -9,6 +9,7 @@ import { Section } from '../_common/entities/section.entity';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
 import { Page } from 'src/_common/entities/page.entity';
+import { slugify } from '../_common/utils/slugify';
 
 @Injectable()
 export class SectionService {
@@ -83,6 +84,7 @@ export class SectionService {
     pageId?: number,
     type?: string,
     acceptLanguage: string = 'az',
+    name?: string,
   ): Promise<any[]> {
     // Changed return type to any[] instead of Partial<Section>[]
     try {
@@ -90,6 +92,7 @@ export class SectionService {
         pageId,
         type,
         acceptLanguage,
+        name,
       });
 
       const where: any = { isActive: true };
@@ -107,8 +110,18 @@ export class SectionService {
         order: { order: 'ASC', createdAt: 'DESC' },
       });
 
+      // Filter by name using slug logic
+      let filteredSections = sections;
+      if (name) {
+        const nameSlug = slugify(name);
+        filteredSections = sections.filter((section) => {
+          const sectionNameSlug = slugify(section.name);
+          return sectionNameSlug === nameSlug;
+        });
+      }
+
       // Return sections with only the selected language content
-      const filteredSections = sections.map((section) => ({
+      const mappedSections = filteredSections.map((section) => ({
         id: section.id,
         name: section.name,
         type: section.type,
@@ -133,7 +146,7 @@ export class SectionService {
           : section.additionalData,
       }));
 
-      return filteredSections;
+      return mappedSections;
     } catch (error) {
       console.error('Error in findAllWithSelectedLanguage:', error);
       throw error;
@@ -160,14 +173,25 @@ export class SectionService {
   }
 
   // 🔹 Admin üçün bütün section-ları gətirmək
-  async findAllForAdmin(): Promise<Section[]> {
+  async findAllForAdmin(name?: string): Promise<Section[]> {
     try {
-      console.log('findAllForAdmin called');
+      console.log('findAllForAdmin called', { name });
       const sections = await this.sectionRepository.find({
         order: { order: 'ASC', createdAt: 'DESC' },
       });
-      console.log(`findAllForAdmin found ${sections.length} sections`);
-      return sections;
+      
+      // Filter by name using slug logic
+      let filteredSections = sections;
+      if (name) {
+        const nameSlug = slugify(name);
+        filteredSections = sections.filter((section) => {
+          const sectionNameSlug = slugify(section.name);
+          return sectionNameSlug === nameSlug;
+        });
+      }
+      
+      console.log(`findAllForAdmin found ${filteredSections.length} sections`);
+      return filteredSections;
     } catch (error) {
       console.error('Error in findAllForAdmin:', error);
       throw error;

@@ -45,6 +45,12 @@ export class SectionController {
     description: 'Section tipinə görə filter (məs: header, footer, hero)',
   })
   @ApiQuery({
+    name: 'name',
+    required: false,
+    type: String,
+    description: 'Section adına görə filter (slug mantığı ilə)',
+  })
+  @ApiQuery({
     name: 'allLanguages',
     required: false,
     type: Boolean,
@@ -54,17 +60,19 @@ export class SectionController {
   async findAll(
     @Query('pageId') pageId?: string,
     @Query('type') type?: string,
+    @Query('name') name?: string,
     @Query('allLanguages') allLanguages?: boolean,
     @Headers('accept-language') acceptLanguage?: string,
   ): Promise<Section[]> {
     if (allLanguages) {
-      return await this.sectionService.findAllForAdmin();
+      return await this.sectionService.findAllForAdmin(name);
     }
 
     return this.sectionService.findAllWithSelectedLanguage(
       pageId ? Number(pageId) : undefined,
       type,
       acceptLanguage,
+      name,
     );
   }
 
