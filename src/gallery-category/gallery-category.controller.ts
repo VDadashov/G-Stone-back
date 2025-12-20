@@ -20,7 +20,6 @@ export class GalleryCategoryController {
   @ApiBody({ type: CreateGalleryCategoryDto })
   @ApiResponse({ status: 201, description: 'Gallery category created' })
   create(@Body() dto: CreateGalleryCategoryDto) {
-    if (typeof dto.title === 'string') dto.title = JSON.parse(dto.title);
     return this.galleryCategoryService.create(dto);
   }
 

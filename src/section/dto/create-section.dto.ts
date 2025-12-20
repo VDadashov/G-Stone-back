@@ -8,6 +8,7 @@ import {
   IsBoolean,
   Min,
   ValidateNested,
+  ValidateIf,
 } from 'class-validator';
 import { Type } from 'class-transformer';
 import {
@@ -64,14 +65,16 @@ export class CreateSectionDto {
     | 'blog'
     | 'custom';
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ nullable: true, required: false })
   @IsOptional()
+  @ValidateIf((o) => o.title !== null && o.title !== undefined)
   @ValidateNested()
   @Type(() => MultiLanguageText)
   title?: MultiLanguageText | null;
 
-  @ApiPropertyOptional({ nullable: true })
+  @ApiPropertyOptional({ nullable: true, required: false })
   @IsOptional()
+  @ValidateIf((o) => o.description !== null && o.description !== undefined)
   @ValidateNested()
   @Type(() => MultiLanguageText)
   description?: MultiLanguageText | null;
