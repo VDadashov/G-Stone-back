@@ -16,6 +16,7 @@ import { GalleryItemModule } from './gallery-item/gallery-item.module';
 import { ContactModule } from './contact/contact.module';
 import { PageModule } from './page/page.module';
 import { SectionModule } from './section/section.module';
+import { SliderModule } from './slider/slider.module';
 
 @Module({
   imports: [
@@ -34,6 +35,7 @@ import { SectionModule } from './section/section.module';
     ContactModule,
     PageModule,
     SectionModule,
+    SliderModule,
   ],
   controllers: [AppController],
   providers: [AppService],

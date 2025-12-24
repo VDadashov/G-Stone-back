@@ -1,5 +1,5 @@
 export function imageFileFilter(req, file, cb) {
-  if (!file.mimetype.match(/^image\/(jpeg|png|jpg|webp)$/)) {
+  if (!file.mimetype.match(/^image\/(jpeg|png|jpg|webp|avif)$/)) {
     return cb(new Error('Yalnız şəkil faylları qəbul olunur!'), false);
   }
   cb(null, true);

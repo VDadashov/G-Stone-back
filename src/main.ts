@@ -57,7 +57,7 @@ async function bootstrap() {
   const config = new DocumentBuilder()
     .setTitle('GStone API')
     .setDescription('GStone Backend Swagger API')
-    .setVersion('1.0')
+    .setVersion('1.1.1')
     .addBearerAuth()
     .build();
   const document = SwaggerModule.createDocument(app, config);
