@@ -25,6 +25,8 @@ async function bootstrap() {
       'https://admin.gstonegallery.az',
       'https://gstonegallery.az',
       'http://gstonegallery.az',
+      'https://www.gstonegallery.az',
+
     ],
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
     allowedHeaders: [
