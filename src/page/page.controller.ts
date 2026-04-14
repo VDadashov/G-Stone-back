@@ -24,8 +24,8 @@ import {
   ApiTags,
   ApiQuery,
 } from '@nestjs/swagger';
-import { RolesGuard } from 'src/_common/guards/roles.guard';
-import { Roles } from 'src/_common/decorators/roles.decorator';
+import { RolesGuard } from '../_common/guards/roles.guard';
+import { Roles } from '../_common/decorators/roles.decorator';
 
 @ApiTags('Pages')
 @Controller('pages')

@@ -8,7 +8,7 @@ import { Repository } from 'typeorm';
 import { Section } from '../_common/entities/section.entity';
 import { CreateSectionDto } from './dto/create-section.dto';
 import { UpdateSectionDto } from './dto/update-section.dto';
-import { Page } from 'src/_common/entities/page.entity';
+import { Page } from '../_common/entities/page.entity';
 import { slugify } from '../_common/utils/slugify';
 
 @Injectable()
